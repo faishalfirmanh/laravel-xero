@@ -117,6 +117,31 @@
             </div>
         </div>
 
+        <div class="card-shadow">
+             <div id="ListInvoiceContainer">
+                <div class="loader" id="listInvoiceLoader"></div>
+            </div>
+
+                <table class="table table-striped table-bordered mt-3 d-none" id="invoiceTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th style="color: black">No Invoice</th>
+                        <th style="color: black">Name Jamaah</th>
+                        <th style="color: black">Name Paket</th>
+                        <th style="color: black">Date</th>
+                        <th style="color: black">Due Date</th>
+                        <th style="color: black">Nominal Paid</th>
+                        <th style="color: black">Status</th>
+                        <th style="color: black">Action Pilih</th>
+                    </tr>
+                </thead>
+                <tbody id="invoiceTableBody">
+        
+                </tbody>
+            </table>
+        </div>
+
     </div>
 
     <!-- Bootstrap JS Bundle -->
@@ -127,6 +152,7 @@
          // URL endpoint sesuai dengan Lumen route yang telah diperbaiki
             const LIST_URL = 'api/get-data-product'; 
             const CREATE_URL = 'api/save-data-product'; 
+            const URL_INVOICE = 'api/getInvoiceByIdPaket/'
          function getDataEdit(id){
             $.ajax({
                 url: `api/get-by-id/${id}`,
@@ -148,15 +174,44 @@
             });
         }
 
+
+        function formatDateIndo(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            }).format(date);
+        }
+
+        // Helper: Format Rupiah
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Helper: Badge Warna Status
+        function getStatusBadge(status) {
+            let color = 'secondary';
+            if (status === 'PAID') color = 'success';
+            else if (status === 'AUTHORISED') color = 'primary'; // Biru untuk Authorised (Open)
+            else if (status === 'DRAFT') color = 'warning';
+            else if (status === 'VOIDED') color = 'danger';
+            
+            return `<span class="badge bg-${color}">${status}</span>`;
+        }
+
         function formatRupiah(angka) {
-    const number = Number(angka) || 0; 
-    return new Intl.NumberFormat('id-ID', { 
-        style: 'currency', 
-        currency: 'IDR',
-        minimumFractionDigits: 0, // Ubah jadi 2 jika ingin ada sen (,00)
-        maximumFractionDigits: 0 
-    }).format(number);
-}
+            const number = Number(angka) || 0; 
+            return new Intl.NumberFormat('id-ID', { 
+                style: 'currency', 
+                currency: 'IDR',
+                minimumFractionDigits: 0, // Ubah jadi 2 jika ingin ada sen (,00)
+                maximumFractionDigits: 0 
+            }).format(number);
+        }
         $(document).ready(function() {
          
             /**
@@ -168,23 +223,23 @@
                 $('#contactTableBody').empty();
 
 
-                $.ajax({
-                    url: `api/get-invoices`,
-                    type: 'GET',
-                    dataType: 'json',
-                    success: function(data, textStatus, xhr) {
-                         if(xhr.status == 'success'){
+                // $.ajax({
+                //     url: `api/get-invoices`,
+                //     type: 'GET',
+                //     dataType: 'json',
+                //     success: function(data, textStatus, xhr) {
+                //          if(xhr.status == 'success'){
                             
-                            $('#notif').
-                            html('<div class="alert alert-primary" role="alert">data tersingkronisasi</div>');
-                         }
+                //             $('#notif').
+                //             html('<div class="alert alert-primary" role="alert">data tersingkronisasi</div>');
+                //          }
                         
                     
-                    },
-                    error: function(xhr, status, error) {
-                        console.log('error',xhr)
-                    }
-                });
+                //     },
+                //     error: function(xhr, status, error) {
+                //         console.log('error',xhr)
+                //     }
+                // });
 
                 $.ajax({
                     url: LIST_URL,
@@ -227,6 +282,7 @@
                         } else {
                             $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data kontak yang ditemukan.</td></tr>');
                         }
+                          //
                     },
                     error: function(xhr, status, error) {
                         $('#listLoader').addClass('d-none');
@@ -237,6 +293,86 @@
                 });
             }
 
+                    function fetchDataInvoice(idPaket) {
+                         // Tampilkan loader jika ada, sembunyikan tabel dulu
+                        $('#listInvoiceLoader').removeClass('d-none');
+                        $('#invoiceTable').addClass('d-none');
+                        
+                        // Bersihkan isi tbody sebelum request
+                        $('#invoiceTableBody').empty();
+
+                        $.ajax({
+                            url: `${URL_INVOICE}${idPaket}`, // Pastikan URL ini valid
+                            type: 'GET',
+                            dataType: 'json',
+                            success: function(response) {
+                                console.log('get invoice', response);
+                                
+                                // Sembunyikan loader
+                              
+                                
+                                // Cek apakah response kosong
+                                if (!response || Object.keys(response).length === 0) {
+                                    $('#invoiceTableBody').html('<tr><td colspan="8" class="text-center">Data tidak ditemukan</td></tr>');
+                                    $('#invoiceTable').removeClass('d-none');
+                                    return;
+                                }
+
+                                let rows = '';
+                                let counter = 1;
+
+                                // KARENA DATA BERUPA OBJECT, GUNAKAN Object.entries()
+                                // key = UUID (misal: "b98a571d..."), item = Data Object
+                                Object.entries(response).forEach(([key, item]) => {
+                                    
+                                    // 1. Format Tanggal (Indo)
+                                    let date = formatDateIndo(item.tanggal);
+                                    let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
+
+                                    // 2. Format Rupiah
+                                    let nominalPaid = formatRupiah(item.amount_paid);
+
+                                    // 3. Warna Status (Bootstrap Badge)
+                                    let statusBadge = getStatusBadge(item.status);
+
+                                    // 4. Susun HTML Row
+                                    rows += `
+                                        <tr>
+                                            <td>${counter++}</td>
+                                            <td>${item.no_invoice}</td>
+                                            <td>${item.paket_name}</td>
+                                            <td>${item.nama_jamaah || '-'}</td>
+                                            <td>${date}</td>
+                                            <td>${dueDate}</td>
+                                            <td class="text-end">${nominalPaid}</td>
+                                            <td class="text-center">${statusBadge}</td>
+                                            <td class="text-center">
+                                                <button type="button" 
+                                                        class="btn btn-primary btn-sm" 
+                                                        onclick="pilihInvoice('${key}', '${item.no_invoice}', '${item.amount_paid}')">
+                                                    <i class="fas fa-check"></i> Pilih
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                });
+
+                                // Masukkan rows ke tbody
+                                $('#invoiceTableBody').html(rows);
+                                // Munculkan tabel
+                                $('#listInvoiceLoader').addClass('d-none');
+                                $('#invoiceTable').removeClass('d-none');
+                            },
+                            error: function(xhr, status, error) {
+                                $('#listInvoiceLoader').addClass('d-none');
+                                $('#invoiceTable').removeClass('d-none');
+                                console.error("Error fetching data:", error, status, xhr);
+                                
+                                // Perbaikan: Target ke tbody, jangan ke table ID agar header tidak hilang
+                                $('#invoiceTableBody').html('<tr><td colspan="8" class="text-center text-danger">Gagal mengambil data invoice dari server.</td></tr>');
+                            }
+                        });
+                    }
            
 
             // Panggil fungsi saat halaman pertama kali dimuat
@@ -285,11 +421,12 @@
                     },
                     success: function(response) {
                         console.log('payload',JSON.stringify(payload))
-                        console.log('sukses',response)
+                    
                         // Simulasi response sukses
                         $formMessage.html('<strong>Sukses!</strong> Proudct & Service berhasil disimpan.').addClass('alert-success').removeClass('d-none');
-                        $('#createContactForm')[0].reset(); // Kosongkan form
+                    //    $('#createContactForm')[0].reset(); // Kosongkan form
                         fetchContacts(); // Muat ulang daftar kontak
+                        fetchDataInvoice(payload.Items[0].Code)
                     },
                     error: function(xhr) {
                         console.log('error',xhr)

@@ -83,8 +83,9 @@ class InvoicesController extends Controller
     }
 
 
-    public function getInvoiceByIdPaket($itemCode)
+    public function getInvoiceByIdPaket($itemCode = 0)
     {
+        //  dd($itemCode);
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
