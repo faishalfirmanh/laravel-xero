@@ -82,6 +82,53 @@ class InvoicesController extends Controller
         }
     }
 
+    public function updateInvoiceSelected(Request $request)
+    {
+
+    }
+
+
+    public function updateInvoicePerRows($parent_id, $amount_input, $line_item_id)
+    {
+        // $parent_id = $request->parent_invoice;
+        //input invoice_id, amount (harga paket setelah update), line_items
+
+        $cleanId = str_replace('"', '', $parent_id);//trim($parent_id, '"');
+        //dd($cleanId);
+        $response_detail = Http::withHeaders([
+            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
+            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->get("https://api.xero.com/api.xro/2.0/Invoices/$cleanId");
+        //  dd($response_detail);
+
+        $all_itemm = [];
+
+        foreach ($response_detail['Invoices'] as $key => $value) {//list per paket
+            foreach ($value['LineItems'] as $key2 => $value2) {//item tiap paket
+                // $cek_is_update_Qty = $value2['LineItemID'] == $request->line_item_id ? $request->qty_input : $value2['Quantity'];
+                $cek_is_update_Amount = $value2['LineItemID'] == $line_item_id ? $amount_input : $value2['UnitAmount'];
+                $all_itemm[] = [
+                    'LineItemID' => $value2['LineItemID'],
+                    'ItemCode' => $value2['ItemCode'],
+                    'Description' => 'update harga paket ' . $value2['Item']['Name'],
+                    'UnitAmount' => $cek_is_update_Amount,
+                    'Quantity' => $value2['Quantity'],
+                ];
+            }
+        }
+        $parent_wrap = ['InvoiceID' => $parent_id, 'LineItems' => $all_itemm];
+
+        $update_tiap_row_invoices = Http::withHeaders([
+            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
+            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->post('https://api.xero.com/api.xro/2.0/Invoices', $parent_wrap);
+        // dd($update_tiap_row_invoices->status());//200
+        //return response()->json($update_tiap_row_invoices->json() ?: ['message' => 'Xero API Error'], $update_tiap_row_invoices->status());
+    }
 
     public function getInvoiceByIdPaket($itemCode = 0)
     {
@@ -94,11 +141,8 @@ class InvoicesController extends Controller
                 'Accept' => 'application/json',
             ])->get('https://api.xero.com/api.xro/2.0/Invoices');
 
-            //  dd($response);
-            $list_invoice = [];
-            // if ($response->status() == 200) {
 
-
+            $items_inv = 0;
             $list_invoice = [];
             foreach ($response['Invoices'] as $key => $value) {
                 $cleanId = trim($value['InvoiceID'], '"');//invoiceId
@@ -116,12 +160,18 @@ class InvoicesController extends Controller
 
                     foreach ($value2['LineItems'] as $key3 => $value3) {//list
                         // dd($value2);
+                        //$cek_detail_row = isset($list_invoice[$cleanId]) && $list_invoice[$cleanId]['line_item_id'] === $value3['LineItemID'];
+
                         if (isset($value3['ItemCode']) && $value3['ItemCode'] == $itemCode) {
-                            //  dd($value2['DueDateString']);
-                            $list_invoice[$cleanId] = [
+                            //  dd($value3);
+
+                            $list_invoice[] = [
+                                'parent_invoice_id' => $cleanId,
                                 'nama_jamaah' => $value2['Contact']['Name'],
                                 'no_invoice' => $value['InvoiceNumber'],
                                 'line_item_id' => $value3['LineItemID'],
+                                'detail_amount_tiap_item' => $value3['LineAmount'],
+                                'qty_tiap_item' => $value3['Quantity'],
                                 'tanggal' => $value2['DateString'],
                                 'tanggal_due_date' => $value2['DueDateString'] ?? null,
                                 'paket_name' => $value3['Item']['Name'],
@@ -135,9 +185,10 @@ class InvoicesController extends Controller
 
                 }
             }
-            return response()->json($list_invoice ?: ['message' => 'Xero API Error'], $response->status());
+            // dd($items_inv);
+            return response()->json($list_invoice ?: ['message' => 'Xero API Error'], count($list_invoice) > 0 ? $response->status() : 404);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], $e->getCode());
         }
     }
 

@@ -22,4 +22,5 @@ Route::get('/get-by-id/{id}', [ProductAndServiceController::class, 'getProductBy
 //invoice
 Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaket']);
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
+Route::post('/submitUpdateinvoices', [InvoicesController::class, 'updateInvoiceSelected']);
 
