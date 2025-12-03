@@ -82,10 +82,7 @@ class InvoicesController extends Controller
         }
     }
 
-    public function updateInvoiceSelected(Request $request)
-    {
 
-    }
 
     public function getDetailInvoice($idInvoice)
     {
@@ -108,7 +105,26 @@ class InvoicesController extends Controller
         return view('detail_invoices');
     }
 
+    public function updateInvoiceSelected(Request $request)
+    {
+        $rawContent = $request->getContent();
+        $data = json_decode($rawContent, true);
+        $tot = 0;
+        $array = [];
+        foreach ($data['items'] as $key => $value) {
+            if ($value['status'] != 'PAID') {
+                self::updateInvoicePerRows($value['parentId'], $data['price_update'], $value['lineItemId']);
+                $tot++;
+                $array[] = $value['no_invoice'];
+            } else {
 
+            }
+
+        }
+        return response()->json($array, 200);
+    }
+
+    //untuk yang draft
     public function updateInvoicePerRows($parent_id, $amount_input, $line_item_id)
     {
         // $parent_id = $request->parent_invoice;

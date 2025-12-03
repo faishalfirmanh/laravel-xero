@@ -29,3 +29,4 @@ Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDeta
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
 Route::post('/submitUpdateinvoices', [InvoicesController::class, 'updateInvoiceSelected']);
 
+Route::post('/updatePerbaris/{parent_id}/{amount_input}/{line_item_id}', [InvoicesController::class, 'updateInvoicePerRows']);//untuk testing

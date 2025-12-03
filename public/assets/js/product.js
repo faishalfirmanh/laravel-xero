@@ -170,6 +170,7 @@ $(document).ready(function () {
             data.parentId = parts[0];
             data.lineItemId = parts[1];
             data.status = parts[2];
+            data.no_invoice = parts[3];
 
             selectedItems.push(data);
         });
@@ -180,6 +181,21 @@ $(document).ready(function () {
         }
 
         // 4. Lihat Hasil di Console
+        $.ajax({
+            url: 'api/submitUpdateinvoices',
+            type: 'POST',
+            dataType: 'json',
+            data: JSON.stringify({
+                price_update: harga_update,
+                items: selectedItems
+            }),
+            success: function (response) {
+                console.log(response)
+            },
+            error: function (xhr, err) {
+
+            }
+        })
         console.log('Data Terpilih:', selectedItems);
         console.log('harga', harga_update)
     })
@@ -246,7 +262,7 @@ $(document).ready(function () {
                                                         type="checkbox" 
                                                         value="${key}" 
                                                         id="cb_${key}"
-                                                        data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}"
+                                                        data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}"
                                                         data-amount="${price_afer_save}">
                                                 </div>
                                             </td>
