@@ -87,6 +87,27 @@ class InvoicesController extends Controller
 
     }
 
+    public function getDetailInvoice($idInvoice)
+    {
+        try {
+            $response_detail = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
+                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->get("https://api.xero.com/api.xro/2.0/Invoices/$idInvoice");
+            return response()->json($response_detail->json() ?: ['message' => 'Xero API Error'], $response_detail->status());
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], $e->getCode());
+        }
+
+    }
+
+    public function viewDetailInvoice($idInvoice)
+    {
+        return view('detail_invoices');
+    }
+
 
     public function updateInvoicePerRows($parent_id, $amount_input, $line_item_id)
     {

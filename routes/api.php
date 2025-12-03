@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\InvoicesController;
 use App\Http\Controllers\ProductAndServiceController;
@@ -11,6 +12,9 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 
+Route::get('getCodeBeforeToken', [ConfigController::class, 'getAuthUrl']);
+Route::post('getToken', [ConfigController::class, 'getToken']);
+
 Route::post('/create-data', [ContactController::class, 'createContact']);
 Route::get('/get-data', [ContactController::class, 'getContact']);
 
@@ -21,6 +25,7 @@ Route::get('/get-by-id/{id}', [ProductAndServiceController::class, 'getProductBy
 
 //invoice
 Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaket']);
+Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDetailInvoice']);
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
 Route::post('/submitUpdateinvoices', [InvoicesController::class, 'updateInvoiceSelected']);
 

@@ -2,11 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Servics\ConfigXero;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 class ContactController extends Controller
 {
+
+
+    protected $configXero;
+
+    public function __construct()
+    {
+        // $this->configXero = new ConfigXero();
+    }
+
     public function viewContackForm()
     {
         return view('contact');
@@ -14,7 +24,9 @@ class ContactController extends Controller
 
     public function getContact(Request $request)
     {
+
         try {
+            // $accessToken = $this->configXero->getValidAccessToken();
             // Panggilan dilakukan dari SISI SERVER, BUKAN BROWSER
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . env('BARER_TOKEN'),

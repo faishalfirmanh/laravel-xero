@@ -1,6 +1,9 @@
 const LIST_URL = 'api/get-data-product';
 const CREATE_URL = 'api/save-data-product';
 const URL_INVOICE = 'api/getInvoiceByIdPaket/'
+const baseUrlOrigin = window.location.origin;
+
+console.log('base url', baseUrlOrigin)
 function getDataEdit(id) {
     $.ajax({
         url: `api/get-by-id/${id}`,
@@ -142,7 +145,7 @@ $(document).ready(function () {
                     $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data kontak yang ditemukan.</td></tr>');
                 }
                 //
-                $('#listInvoiceLoader').addClass('d-none');
+                // $('#listInvoiceLoader').addClass('d-none');
             },
             error: function (xhr, status, error) {
                 $('#listLoader').addClass('d-none');
@@ -182,10 +185,9 @@ $(document).ready(function () {
     })
 
     function fetchDataInvoice(idPaket) {
-        // Tampilkan loader jika ada, sembunyikan tabel dulu
-        $('#listInvoiceLoader').removeClass('d-none');
-        $('#invoiceTable').addClass('d-none');
 
+        $('#invoiceTable').addClass('d-none');
+        const routeTemplate = "{{ route('detailInvoiceWeb', ':id') }}";
         // Bersihkan isi tbody sebelum request
         $('#invoiceTableBody').empty();
 
@@ -205,18 +207,9 @@ $(document).ready(function () {
                     return; // Hentikan proses, jangan lanjut ke looping
                 }
 
-                // Cek apakah response kosong
-                // if (!response || Object.keys(response).length === 0) {
-                //     $('#invoiceTableBody').html('<tr><td colspan="8" class="text-center">Data tidak ditemukan</td></tr>');
-                //     $('#invoiceTable').removeClass('d-none');
-                //     return;
-                // }
-
                 let rows = '';
                 let counter = 1;
 
-                // KARENA DATA BERUPA OBJECT, GUNAKAN Object.entries()
-                // key = UUID (misal: "b98a571d..."), item = Data Object
                 response.forEach((item, key) => {
 
                     // 1. Format Tanggal (Indo)
@@ -229,6 +222,9 @@ $(document).ready(function () {
                     // 3. Warna Status (Bootstrap Badge)
                     let statusBadge = getStatusBadge(item.status);
                     let price_afer_save = $("#unit_price_save").val();
+                    let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
+                    let url = $(this).data('url');
+                    //  console.log(finalUrl, url)
                     // 4. Susun HTML Row
                     rows += `
                                         <tr>
@@ -242,6 +238,9 @@ $(document).ready(function () {
                                             <td>${item.total}</td>
                                             <td class="text-center">${statusBadge}</td>
                                             <td class="text-center">
+                                                <a href="${finalUrl}" target="_blank" class="btn btn-primary btn-sm">
+                                                    Detail
+                                                </a>
                                                 <div class="form-check d-flex justify-content-center">
                                                     <input class="form-check-input invoice-checkbox" 
                                                         type="checkbox" 
