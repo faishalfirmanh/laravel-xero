@@ -3,7 +3,9 @@
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\InvoicesController;
+use App\Http\Controllers\InvoicesDuplicateController;
 use App\Http\Controllers\ProductAndServiceController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -23,10 +25,15 @@ Route::post('/save-data-product', [ProductAndServiceController::class, 'updatePr
 Route::get('/get-data-product', [ProductAndServiceController::class, 'getProduct']);
 Route::get('/get-by-id/{id}', [ProductAndServiceController::class, 'getProductById']);
 
+//payment
+Route::post('/updateDeletedPayment/{payment_id}/{status}', [PaymentController::class, 'updatePaymentStatus']);
+Route::get('/getDetailPayment/{idPayment}', [InvoicesController::class, 'getDetailPayment']);
+Route::post('/createPayments', [PaymentController::class, 'createPayments']);
+
 //invoice
 Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaket']);
 Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDetailInvoice']);
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
-Route::post('/submitUpdateinvoices', [InvoicesController::class, 'updateInvoiceSelected']);
+Route::post('/submitUpdateinvoices', [InvoicesDuplicateController::class, 'updateInvoiceSelected']);
 
 Route::post('/updatePerbaris/{parent_id}/{amount_input}/{line_item_id}', [InvoicesController::class, 'updateInvoicePerRows']);//untuk testing

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Models\PaymentParams;
 class InvoicesController extends Controller
 {
     public function viewProduct()
@@ -83,6 +84,13 @@ class InvoicesController extends Controller
     }
 
 
+    function xeroDateToPhp($xeroDate, $format = 'Y-m-d') {
+        if (empty($xeroDate)) return null;
+        preg_match('/\/Date\((-?\d+)/', $xeroDate, $matches);
+    
+        if (!isset($matches[1])) return null;
+        return date($format, $matches[1] / 1000);
+    }
 
     public function getDetailInvoice($idInvoice)
     {
@@ -112,20 +120,108 @@ class InvoicesController extends Controller
         $tot = 0;
         $array = [];
         foreach ($data['items'] as $key => $value) {
-            if ($value['status'] != 'PAID') {
-                self::updateInvoicePerRows($value['parentId'], $data['price_update'], $value['lineItemId']);
+            //dd($value);
+               if($value['no_payment'] != "kosong"){
+                //dd($value['no_payment']);
+                self::getDetailPayment($value['no_payment']);
+                self::updateInvoicePaidPerRows($value['no_payment']);
+               }
+                self::updateInvoicePerRows($value['parentId'], $data['price_update'], $value['lineItemId'],$value['status']);
+                if($value['no_payment'] != "kosong"){
+                    self::createPayments($value['parentId']);
+                }
                 $tot++;
                 $array[] = $value['no_invoice'];
-            } else {
-
-            }
-
+    
         }
         return response()->json($array, 200);
     }
 
-    //untuk yang draft
-    public function updateInvoicePerRows($parent_id, $amount_input, $line_item_id)
+    public function getDetailPayment($idPayment)
+    {
+         try {
+            $response_detail = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
+                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->get("https://api.xero.com/api.xro/2.0/Payments/$idPayment");
+           // dd($response_detail['Payments'][0]["Amount"]);
+            $amount = $response_detail['Payments'][0]["Amount"];
+            $account_code = $response_detail['Payments'][0]["Account"]["AccountID"];
+            $date = self::xeroDateToPhp($response_detail['Payments'][0]["Date"]) ;
+            $invoice_id = $response_detail['Payments'][0]["Invoice"]["InvoiceID"];
+           // dd($invoice_id);
+            $reference_id ="$invoice_id update harga otomatis xero paid";
+            self::insertToDb($amount,$account_code,$date, $invoice_id, $reference_id);
+            //dd($invoice_id);
+           // $account_code = 
+           //  self::insertToDb();
+           // return response()->json($response_detail->json() ?: ['message' => 'Xero API Error'], $response_detail->status());
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error insert db get detail payment : ' . $e->getMessage()], $e->getCode());
+        }
+    }
+
+    public function insertToDb($amount,$account_code,$date, $invoice_id, $reference_id)
+    {
+        PaymentParams::create([
+            'invoice_id'=>$invoice_id,
+            'account_code'=>$account_code,
+            'date'=>$amount,
+            'amount'=>$amount,
+            'reference'=>$reference_id
+        ]);
+    }
+
+    public function createPayments($invoice_id)
+    {
+        $invoice_table = PaymentParams::where('invoice_id',$invoice_id)->first();
+        $form = [
+            "Payments" => [
+            [
+                "Invoice" => [
+                    "InvoiceID" => $invoice_id
+                ],
+                "Account" => [
+                    "Code" => $invoice_table->account_code
+                ],
+                "Date" => $invoice_table->date,
+                "Amount" => $invoice_table->amount, 
+                "Reference" => $invoice_table->reference ?? "Payment via API",
+            ]
+        ]
+        ];
+         $update_tiap_row_invoices = Http::withHeaders([
+            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
+            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->post('	https://api.xero.com/api.xro/2.0/Payments', $form);
+    }
+
+
+    public function updateInvoicePaidPerRows($payment_id)
+    {  
+        $inv = [];
+        $update_payment = Http::withHeaders([
+            'Authorization' => 'Bearer ' . env('BARER_TOKEN'), // Sebaiknya ganti ke config('xero.token') nanti
+            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->post("https://api.xero.com/api.xro/2.0/Payments/$payment_id",  [ "Status" => 'DELETED' ]);
+
+        if ($update_payment->failed()) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Gagal update Payment',
+                'details' => $update_payment->json()
+            ], $update_payment->status());
+        }
+    }
+
+    //untuk yang draft dan awaiting payment
+    public function updateInvoicePerRows($parent_id, $amount_input, $line_item_id,$status_invoice)
     {
         // $parent_id = $request->parent_invoice;
         //input invoice_id, amount (harga paket setelah update), line_items
@@ -141,17 +237,20 @@ class InvoicesController extends Controller
         //  dd($response_detail);
 
         $all_itemm = [];
-
+     
         foreach ($response_detail['Invoices'] as $key => $value) {//list per paket
             foreach ($value['LineItems'] as $key2 => $value2) {//item tiap paket
                 // $cek_is_update_Qty = $value2['LineItemID'] == $request->line_item_id ? $request->qty_input : $value2['Quantity'];
                 $cek_is_update_Amount = $value2['LineItemID'] == $line_item_id ? $amount_input : $value2['UnitAmount'];
+             //   dd($value2)
                 $all_itemm[] = [
                     'LineItemID' => $value2['LineItemID'],
                     'ItemCode' => $value2['ItemCode'],
                     'Description' => 'update harga paket ' . $value2['Item']['Name'],
                     'UnitAmount' => $cek_is_update_Amount,
                     'Quantity' => $value2['Quantity'],
+                    'AccountID'=>$value2['AccountID'],
+                    'TaxType'=>$value2['TaxType']
                 ];
             }
         }
@@ -164,7 +263,7 @@ class InvoicesController extends Controller
             'Accept' => 'application/json',
         ])->post('https://api.xero.com/api.xro/2.0/Invoices', $parent_wrap);
         // dd($update_tiap_row_invoices->status());//200
-        //return response()->json($update_tiap_row_invoices->json() ?: ['message' => 'Xero API Error'], $update_tiap_row_invoices->status());
+        return response()->json($update_tiap_row_invoices->json() ?: ['message' => 'Xero API Error'], $update_tiap_row_invoices->status());
     }
 
     public function getInvoiceByIdPaket($itemCode = 0)
@@ -215,6 +314,7 @@ class InvoicesController extends Controller
                                 'amount_paid' => $value2['AmountPaid'],
                                 'total' => $value2['Total'],
                                 'status' => $value['Status'],
+                                'payment'=>$value['Payments']
                             ];
                         }
 

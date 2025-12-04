@@ -3,7 +3,7 @@ const CREATE_URL = 'api/save-data-product';
 const URL_INVOICE = 'api/getInvoiceByIdPaket/'
 const baseUrlOrigin = window.location.origin;
 
-console.log('base url', baseUrlOrigin)
+
 function getDataEdit(id) {
     $.ajax({
         url: `api/get-by-id/${id}`,
@@ -161,16 +161,19 @@ $(document).ready(function () {
         let selectedItems = [];
         $('.invoice-checkbox:checked').each(function () {
             let checkbox = $(this);
+            console.log('checkbox',checkbox)
             let data = {
                 key: checkbox.val(), // Mengambil value="${key}"
                 combinedInfo: checkbox.data('no-invoice'),
                 amount: checkbox.data('amount')
             };
             let parts = String(data.combinedInfo).split('_');
+            console.log('xxaaa0',parts)
             data.parentId = parts[0];
             data.lineItemId = parts[1];
             data.status = parts[2];
             data.no_invoice = parts[3];
+            data.no_payment = parts[4];
 
             selectedItems.push(data);
         });
@@ -227,11 +230,11 @@ $(document).ready(function () {
                 let counter = 1;
 
                 response.forEach((item, key) => {
-
+                    console.log('iteeem0',item)
                     // 1. Format Tanggal (Indo)
                     let date = formatDateIndo(item.tanggal);
                     let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
-
+                   // console.log('item',item)
                     // 2. Format Rupiah
                     let nominalPaid = formatRupiah(item.amount_paid);
 
@@ -241,13 +244,15 @@ $(document).ready(function () {
                     let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
                     let url = $(this).data('url');
                     //  console.log(finalUrl, url)
+                    let cek_item_payment = item.payment.length > 0 ? item.payment[0].PaymentID : 'kosong';
+                    //console.log('payment-id',cek_item_payment)
                     // 4. Susun HTML Row
                     rows += `
                                         <tr>
                                             <td>${counter++}</td>
                                             <td>${item.no_invoice}</td>
-                                            <td>${item.paket_name}</td>
-                                            <td>${item.nama_jamaah || '-'}</td>
+                                            <td>${item.nama_jamaah}</td>
+                                            <td>${item.paket_name || '-'}</td>
                                             <td>${date}</td>
                                             <td>${dueDate}</td>
                                             <td class="text-end">${nominalPaid}</td>
@@ -262,7 +267,7 @@ $(document).ready(function () {
                                                         type="checkbox" 
                                                         value="${key}" 
                                                         id="cb_${key}"
-                                                        data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}"
+                                                        data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}_${cek_item_payment}"
                                                         data-amount="${price_afer_save}">
                                                 </div>
                                             </td>
