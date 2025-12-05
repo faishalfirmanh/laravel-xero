@@ -7,4 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class PaymentParams extends Model
 {
     //
+
+ protected $fillable = [
+        'invoice_id',
+        'account_code',
+        'date',
+        'amount',
+        'reference',
+    ];
+
 }

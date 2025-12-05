@@ -1,6 +1,7 @@
 const LIST_URL = 'api/get-data-product';
 const CREATE_URL = 'api/save-data-product';
 const URL_INVOICE = 'api/getInvoiceByIdPaket/'
+const URL_DETAIL_Item = 'api/get-by-id/'
 const baseUrlOrigin = window.location.origin;
 
 
@@ -110,7 +111,7 @@ $(document).ready(function () {
             // Gunakan mode success/error untuk simulasi,
             // karena ini hanya frontend, kita akan gunakan data dummy response
             success: function (response) {
-                console.log('ssss', response)
+               // console.log('ssss', response)
                 $('#listLoader').addClass('d-none');
                 $('#contactTable').removeClass('d-none');
 
@@ -158,6 +159,7 @@ $(document).ready(function () {
 
     $("#btnSaveInvoice").on('click', function (e) {
         let harga_update = $("#UnitPrice").val()
+        let id_account_item = $("#account_id_item").val();
         let selectedItems = [];
         $('.invoice-checkbox:checked').each(function () {
             let checkbox = $(this);
@@ -182,7 +184,7 @@ $(document).ready(function () {
             alert('Harap pilih minimal satu invoice!');
             return;
         }
-
+      //  console.log("accountid",$("#account_id_item").val())
         // 4. Lihat Hasil di Console
         $.ajax({
             url: 'api/submitUpdateinvoices',
@@ -190,7 +192,8 @@ $(document).ready(function () {
             dataType: 'json',
             data: JSON.stringify({
                 price_update: harga_update,
-                items: selectedItems
+                items: selectedItems,
+                account_id_item: id_account_item
             }),
             success: function (response) {
                 console.log(response)
@@ -230,11 +233,11 @@ $(document).ready(function () {
                 let counter = 1;
 
                 response.forEach((item, key) => {
-                    console.log('iteeem0',item)
+                    
                     // 1. Format Tanggal (Indo)
                     let date = formatDateIndo(item.tanggal);
                     let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
-                   // console.log('item',item)
+                 
                     // 2. Format Rupiah
                     let nominalPaid = formatRupiah(item.amount_paid);
 
@@ -243,9 +246,9 @@ $(document).ready(function () {
                     let price_afer_save = $("#unit_price_save").val();
                     let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
                     let url = $(this).data('url');
-                    //  console.log(finalUrl, url)
+                   
                     let cek_item_payment = item.payment.length > 0 ? item.payment[0].PaymentID : 'kosong';
-                    //console.log('payment-id',cek_item_payment)
+                   
                     // 4. Susun HTML Row
                     rows += `
                                         <tr>
@@ -296,6 +299,31 @@ $(document).ready(function () {
     // Panggil fungsi saat halaman pertama kali dimuat
     fetchContacts();
 
+    function fetchDataAccountCodeByItem(idItem){
+         $.ajax({
+            url: `${URL_DETAIL_Item}${idItem}`,
+            type: 'GET',
+            contentType: 'application/json',
+            headers: {
+                "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+            },
+            success: function (response) {
+                let item_list = response.Items//[0].SalesDetails.AccountCode
+                item_list.forEach((x)=>{
+                   if(x.SalesDetails.AccountCode){
+                     $("#account_id_item").val(x.SalesDetails.AccountCode)
+                   }else{
+                      $("#account_id_item").val(0)
+                   }
+                })
+            },
+            error: function (xhr) {
+                console.log('error', xhr)
+                // Tampilkan pesan error
+             
+            }
+        });
+    }
     // Event listener untuk tombol refresh
     $('#refreshBtn').on('click', fetchContacts);
 
@@ -338,13 +366,12 @@ $(document).ready(function () {
                 "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
             },
             success: function (response) {
-                //  console.log('payload', JSON.stringify(payload))
-
-                // Simulasi response sukses
+                console.log("update harga save", response.Items[0].Code)
                 $formMessage.html('<strong>Sukses!</strong> Proudct & Service berhasil disimpan.').addClass('alert-success').removeClass('d-none');
                 //    $('#createContactForm')[0].reset(); // Kosongkan form
                 fetchContacts(); // Muat ulang daftar kontak
                 fetchDataInvoice(payload.Items[0].Code)
+                fetchDataAccountCodeByItem(response.Items[0].Code)
             },
             error: function (xhr) {
                 console.log('error', xhr)

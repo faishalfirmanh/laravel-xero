@@ -23,14 +23,20 @@ class InvoicesDuplicateController extends Controller
         $array = [];
         $errors = [];
 
+        //dd($data["account_id_item"]);
+
         foreach ($data['items'] as $key => $value) {
             try {
                 // 1. Jika Invoice sudah ada pembayaran (Paid/Partial), Backup & Void dulu
+               // dd($value);
                 if ($value['no_payment'] != "kosong") {
                     // Ambil detail dan simpan ke DB sementara
-                    self::getDetailPayment($value['no_payment']);
+                    self::getDetailPayment($value['no_payment'],$data["account_id_item"]);
                     // Void payment di Xero (Buka Gembok)
-                    self::updateInvoicePaidPerRows($value['no_payment']);
+                    if($value["status"] == "PAID"){
+                      self::updateInvoicePaidPerRows($value['no_payment']);
+                    }
+                  
                 }
 
                 // 2. Update Item/Harga Invoice
@@ -38,6 +44,7 @@ class InvoicesDuplicateController extends Controller
 
                 // 3. Jika tadi Paid, bayar ulang (Re-Payment)
                 if ($value['no_payment'] != "kosong") {
+                    //dd("create");
                     self::createPayments($value['parentId']);
                 }
 
@@ -63,7 +70,7 @@ class InvoicesDuplicateController extends Controller
         return response()->json($array, 200);
     }
 
-    public function getDetailPayment($idPayment)
+    public function getDetailPayment($idPayment,$sales_acount)//account_id_item = sales account on items
     {
         // Jangan pakai Try-Catch di sini agar error naik ke fungsi utama
         $response_detail = Http::withHeaders([
@@ -86,7 +93,7 @@ class InvoicesDuplicateController extends Controller
         $payment = $data['Payments'][0];
 
         $amount = $payment["Amount"];
-        $account_code = $payment["Account"]["AccountID"] ?? $payment["Account"]["Code"]; // Jaga-jaga struktur beda
+        $account_code =$sales_acount; //$payment["Account"]["AccountID"] ?? $payment["Account"]["Code"];
         $date = self::xeroDateToPhp($payment["Date"]);
         $invoice_id = $payment["Invoice"]["InvoiceID"];
         $reference_id = "$invoice_id update harga otomatis xero paid";
@@ -111,7 +118,7 @@ class InvoicesDuplicateController extends Controller
     public function createPayments($invoice_id)
     {
         $invoice_table = PaymentParams::where('invoice_id', $invoice_id)->first();
-        
+       // dd($invoice_table);
         if (!$invoice_table) {
             throw new \Exception("Data backup payment tidak ditemukan di DB lokal untuk Invoice ID: $invoice_id");
         }
@@ -123,7 +130,7 @@ class InvoicesDuplicateController extends Controller
                         "InvoiceID" => $invoice_id
                     ],
                     "Account" => [
-                        "Code" => "880" 
+                        "Code" => 200,//$invoice_table->account_code 
                     ],
                     "Date" => $invoice_table->date,
                     "Amount" => (float)$invoice_table->amount, // Cast ke float/number
@@ -131,7 +138,7 @@ class InvoicesDuplicateController extends Controller
                 ]
             ]
         ];
-
+      
         // HAPUS SPASI di depan URL
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
@@ -149,7 +156,7 @@ class InvoicesDuplicateController extends Controller
     public function updateInvoicePaidPerRows($payment_id)
     {
         // PERBAIKAN: Ganti DELETED menjadi VOIDED
-        $statusPayload = ["Status" => "VOIDED"];
+        $statusPayload = ["Status" => "DELETED"];
 
         $update_payment = Http::withHeaders([
             'Authorization' => 'Bearer ' . env('BARER_TOKEN'),

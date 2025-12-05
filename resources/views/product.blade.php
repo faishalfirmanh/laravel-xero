@@ -67,6 +67,7 @@
                         <div class="col-md-4">
                             <label for="UnitPrice" class="form-label">Harga</label>
                             <input type="text" class="form-control" id="UnitPrice" name="UnitPrice">
+                            <input type="hidden"  id="account_id_item" name="account_id_item">
                             <input type="hidden" id="unit_price_save" name="unit_price_save"/>
                         </div>
                         <div class="col-12 text-center">
