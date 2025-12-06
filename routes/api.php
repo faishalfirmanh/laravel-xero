@@ -5,6 +5,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\InvoicesController;
 use App\Http\Controllers\InvoicesDuplicateController;
 use App\Http\Controllers\ProductAndServiceController;
+use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,5 +36,12 @@ Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getIn
 Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDetailInvoice']);
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
 Route::post('/submitUpdateinvoices', [InvoicesDuplicateController::class, 'updateInvoiceSelected']);
+
+//kategory
+Route::get('/get_divisi', [TrackingController::class, 'getKategory']);
+Route::get('/get_agent', [TrackingController::class, 'getAgent']);
+
+//getAcountDetailAcount Invoice
+Route::get('/getAllAccount', [PaymentController::class, 'getGroupedAccounts']);
 
 Route::post('/updatePerbaris/{parent_id}/{amount_input}/{line_item_id}', [InvoicesController::class, 'updateInvoicePerRows']);//untuk testing

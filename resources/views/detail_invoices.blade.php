@@ -60,7 +60,7 @@
                             <th>Description</th>
                             <th style="width: 80px;">Qty <span class="text-danger">*</span></th>
                             <th style="width: 130px;">Price</th>
-                            <th style="width: 80px;">Disc %</th>
+                            <th style="width: 80px;">Disc (Rp)</th>
                             <th style="width: 150px;">Account</th>
                             <th style="width: 120px;">Tax Rate</th>
                             <th style="width: 100px;">Tax Amt</th>
@@ -74,10 +74,10 @@
                         <tr>
                             <td><select class="form-control item-select"><option>Select Item</option></select></td>
                             <td><input type="text" disabled class="form-control"></td>
-                            <td><input type="number" class="form-control qty" value="1"></td>
+                            <td><input type="number" class="form-control qty" min="1" value="1"></td>
                             <td><input type="number" disabled class="form-control price" value="0"></td>
                             <td><input type="number" class="form-control disc" value="0"></td>
-                            <td><select class="form-control account"><option>Select</option></select></td>
+                            <td><select class="form-control account" disabled><option>Select</option></select></td>
                             <td><select class="form-control tax-rate"><option value="0">0%</option></select></td>
                             <td><input type="number" class="form-control tax-amount" readonly value="0"></td>
                             <td><select class="form-control"><option>None</option></select></td>
@@ -126,39 +126,92 @@
 // --- DATA DUMMY (Disimpan diluar agar bisa dipanggil fungsi) ---
 
 let URL_API_DETAIL = '	https://api.xero.com/api.xro/2.0/Invoices/'
+ let fullUrl = window.location.href;
+    let code_invoice = fullUrl.split('/').pop();
+ //   console.log(code_invoice)
+    let origin_url = new URL(window.location.origin);
+    var BASE_URL = "{{ url('/') }}";
 
-const mockApiResponse = {
-    "Id": "4d40d1b7-34fb-489f-95ee-f13e85ee4537",
-    "Status": "OK",
-    "Invoices": [
-        {
-            "InvoiceNumber": "INV-0012",
-            "Contact": { "Name": "MOH. YASAK (AUTO)" },
-            "DateString": "2025-12-02T00:00:00",
-            "DueDateString": "2026-01-01T00:00:00",
-            "LineItems": [
-                {
-                    "ItemCode": "umroh-anwar-zahid",
-                    "Description": "Paket Umroh Anwar Zahid",
-                    "UnitAmount": 8000.00,
-                    "Quantity": 11.0000,
-                    "AccountCode": "200",
-                    "TaxAmount": 0.00,
-                    "LineAmount": 88000.00
-                },
-                {
-                    "ItemCode": "haji-paul pogba",
-                    "Description": "Haji Plus Paul Pogba",
-                    "UnitAmount": 4300.00,
-                    "Quantity": 1.0000,
-                    "AccountCode": "200",
-                    "TaxAmount": 0.00,
-                    "LineAmount": 4300.00
-                }
-            ]
-        }
-    ]
-};
+let list_agent = [];
+
+let list_divisi = [];
+
+let availableProducts = [];
+function getAllitems(){
+     $.ajax({
+            url: `${BASE_URL}/api/get-data-product`,
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+             
+               if(response.Items){
+                availableProducts = response.Items; 
+               }
+            },
+            error: function (xhr, status, error) {
+                console.log("xxxxx",xhr)
+            }
+    });
+}
+
+
+function getDevisi(){
+     $.ajax({
+            url: `${BASE_URL}/api/get_divisi`,
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+                list_divisi = response[0]; 
+                //console.log("devisi", response[0])
+            },
+            error: function (xhr, status, error) {
+                console.log("xxxxx",xhr)
+            }
+    });
+}
+
+
+
+function getAgent(){
+     $.ajax({
+            url: `${BASE_URL}/api/get_agent`,
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+              list_agent = response[0];
+            },
+            error: function (xhr, status, error) {
+                console.log("xxxxx",xhr)
+            }
+    });
+}
+
+let list_account = [];
+
+function getDataAccount(){
+     $.ajax({
+            url: `${BASE_URL}/api/getAllAccount`,
+            type: 'GET',
+            dataType: 'json',
+            success: function (response) {
+                list_account = response.GroupedAccounts;
+              //console.log("Ress account0", response)
+            },
+            error: function (xhr, status, error) {
+                console.log("xxxxx",xhr)
+            }
+    });
+}
+
+
+$(document).ready(function() {
+    getAllitems();
+    getAgent();
+    getDevisi();
+    getDataAccount();
+})
+
+
 
 function getStatusBadge(status) {
     let color = 'secondary'; // Default color (abu-abu)
@@ -177,32 +230,12 @@ function getStatusBadge(status) {
 }
 
 // ... AJAX SCIRPT ...
-$.ajax({
-    url: urlTarget,
-    type: 'GET',
-    dataType: 'json',
-    success: function (response) {
-        console.log('Status:', response.Invoices[0].Status);
-        
-        // Panggil fungsi (tidak perlu ditampung variable, karena dia langsung update HTML)
-        getStatusBadge(response.Invoices[0].Status);
 
-        let data_baris = response.Invoices[0];
-        loadInvoiceToForm(data_baris);
-    },
-    error: function (xhr, status, error) {
-        console.error('Error:', xhr);
-    }
-});
 
 // --- FIX 3: DEFINISIKAN FUNGSI fetch DI GLOBAL SCOPE ---
 function fetchDataDummy() {
     // Simulasi memanggil data dan memasukkannya ke form
-    let fullUrl = window.location.href;
-    let code_invoice = fullUrl.split('/').pop();
- //   console.log(code_invoice)
-    let origin_url = new URL(window.location.origin);
-    var BASE_URL = "{{ url('/') }}";
+   
     console.log('code',code_invoice)
     let urlTarget = `${BASE_URL}/api/getDetailInvoice/${code_invoice}`;
       $.ajax({
@@ -214,6 +247,7 @@ function fetchDataDummy() {
                 getStatusBadge(response.Invoices[0].Status);
                 let data_baris = response.Invoices[0];
                 loadInvoiceToForm(data_baris);
+                getAllitems();
             },
             error: function (xhr, status, error) {
                 console.error('errro',xhr)
@@ -222,6 +256,60 @@ function fetchDataDummy() {
 
   
 }
+
+$(document).on('change', '.item-select', function() {
+    // 1. Tangkap elemen yang berubah
+    let self = $(this);
+    let itemCode = self.val();
+    let currentRow = self.closest('tr'); // Baris spesifik tempat select berada
+
+    if (!itemCode) {
+        currentRow.find('.price').val(0);
+        currentRow.find('.description').val('');
+        currentRow.find('.amount').val(0);
+        calculateTotal(); // Recalculate totals
+        return;
+    }
+
+    // 3. Panggil API Detail Product
+    let urlProduct = `${BASE_URL}/api/get-by-id/${itemCode}`;
+    
+    $.ajax({
+        url: urlProduct,
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            console.log("Response Product:", response);
+            
+            if (response.Items && response.Items.length > 0) {
+                let itemData = response.Items[0];
+                let salesDetails = itemData.SalesDetails;
+
+                // 4. Update Field di Baris Tersebut
+                // .val() untuk input value, pastikan class selector benar
+                
+                // Set Price
+                currentRow.find('.price').val(salesDetails.UnitPrice || 0);
+                
+                // Set Description
+                currentRow.find('.description').val(itemData.Description || itemData.Name);
+                
+                // Set Account (Jika ada dropdown account)
+                if(salesDetails.AccountCode) {
+                    currentRow.find('.account').val(salesDetails.AccountCode);
+                }
+
+                // 5. Trigger Kalkulasi Ulang (PENTING)
+                // Kita trigger event 'input' pada price agar fungsi calculateTotal() jalan
+                currentRow.find('.price').trigger('input'); 
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("Gagal ambil detail product:", error);
+            currentRow.find('.description').val('Error fetching data');
+        }
+    });
+});
 
 // --- FUNGSI GENERATE HTML ---
 function generateRowHtml(item = null) {
@@ -234,15 +322,65 @@ function generateRowHtml(item = null) {
     const taxAmt = isNew ? 0 : (item.TaxAmount || 0);
     const lineAmt = isNew ? 0 : (item.LineAmount || 0);
     const taxRateVal = (taxAmt > 0) ? "11" : "0";
+   
+
+
+    //account-----
+    let items_option_account = `<option value="">Select Acount</option>`;
+    list_account.forEach(account => {
+        //console.log(account)
+        const a_code = account.Code; 
+        const a_name = `${account.Code}-${account.Name}-${account.Class}`; 
+        const a_selected = (a_code == accCode) ? 'selected' : '';
+        items_option_account += `<option value="${a_code}" ${a_selected}>${a_name}</option>`;
+    });
+    //------------
+
+    //console.log("account",list_account)
+   
+    // --- NEW LOGIC: Generate Item Options dynamically ---
+    let itemOptionsHtml = `<option value="">Select Item</option>`;
+    availableProducts.forEach(product => {
+        const pCode = product.Code; 
+        const pName = product.Name; 
+        const isSelected = (itemCode == pCode) ? 'selected' : '';
+        itemOptionsHtml += `<option value="${pCode}" ${isSelected}>${pName}</option>`;
+    });
+
+
+    let itemOptionsAgent = `<option value="">Select Agent</option>`;
+    let itemOptionsDevisi = `<option value="">Select Devisi</option>`;
+    if(item != null){
+        if( item.Tracking.length > 0){
+            item.Tracking.forEach((x,y)=>{
+                if(x.Name == "Agent"){   
+                    list_agent.forEach(ag => {
+                        const code_agent = ag.TrackingOptionID; 
+                        const name_agent = ag.Name; 
+                        //console.log("name agent ",name_agent)
+                        const isSelected_agent = (x.TrackingOptionID == code_agent) ? 'selected' : '';
+                        itemOptionsAgent += `<option value="${code_agent}" ${isSelected_agent}>${name_agent}</option>`;
+                    });
+                }else if(x.Name == "Divisi"){
+                    list_divisi.forEach(dev => {
+                        const code_devisi = dev.TrackingOptionID; 
+                        const name_devisi = dev.Name; 
+                        //console.log("name divisi ",name_devisi)
+                        const isSelected_devisi = (x.TrackingOptionID == code_devisi) ? 'selected' : '';
+                        itemOptionsDevisi += `<option value="${code_devisi}" ${isSelected_devisi}>${name_devisi}</option>`;
+                    });
+                }
+            })
+        }
+    }
+   
+    // ----------------------------------------------------
 
     return `
         <tr>
             <td>
                 <select class="form-control item-select">
-                    <option value="">Select Item</option>
-                    <option value="umroh-anwar-zahid" ${itemCode == 'umroh-anwar-zahid' ? 'selected' : ''}>Umroh Anwar Zahid</option>
-                    <option value="haji-paul pogba" ${itemCode == 'haji-paul pogba' ? 'selected' : ''}>Haji Paul Pogba</option>
-                    <option value="122" ${itemCode == '122' ? 'selected' : ''}>Paket Umroh 2</option>
+                    ${itemOptionsHtml}  
                 </select>
             </td>
             <td><input type="text" disabled class="form-control description" value="${desc}"></td>
@@ -251,8 +389,7 @@ function generateRowHtml(item = null) {
             <td><input type="number" class="form-control disc" value="0" placeholder="0"></td>
             <td>
                 <select class="form-control account">
-                    <option value="200" ${accCode == '200' ? 'selected' : ''}>200 - Sales</option>
-                    <option value="4600">4600 - Pendapatan Paket</option>
+                    ${items_option_account}
                 </select>
             </td>
             <td>
@@ -265,14 +402,12 @@ function generateRowHtml(item = null) {
             
             <td>
                 <select class="form-control agent">
-                    <option value="">None</option>
-                    <option value="ICE ANGELIA">ICE ANGELIA</option>
+                   ${itemOptionsAgent}
                 </select>
             </td>
             <td>
                 <select class="form-control devisi">
-                    <option value="">None</option>
-                    <option value="Mitra">Mitra</option>
+                   ${itemOptionsDevisi}
                 </select>
             </td>
 

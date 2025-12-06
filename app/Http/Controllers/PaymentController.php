@@ -7,6 +7,37 @@ use Illuminate\Support\Facades\Http;
 class PaymentController extends Controller
 {
    
+
+     public function getGroupedAccounts()
+    {
+        $accessToken = env('BARER_TOKEN');
+        $tenantId = env('XERO_TENANT_ID');
+
+        // Filter: Status harus ACTIVE
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $accessToken,
+            'Xero-Tenant-Id' => $tenantId,
+            'Accept' => 'application/json'
+        ])->get('https://api.xero.com/api.xro/2.0/Accounts', [
+            'where' => 'Status=="ACTIVE"'
+        ]);
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Gagal fetch Accounts'], 500);
+        }
+
+        $accounts = $response->json()['Accounts'];
+
+        $grouped = [];
+        
+     
+        ksort($accounts);
+
+        return response()->json([
+            'Status' => 'OK',
+            'GroupedAccounts' => $accounts
+        ]);
+    }
   
    public function updatePaymentStatus($payment_id, $status = "DELETED")
     {

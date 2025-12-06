@@ -43,9 +43,11 @@ class InvoicesDuplicateController extends Controller
                 self::updateInvoicePerRows($value['parentId'], $data['price_update'], $value['lineItemId'], $value['status']);
 
                 // 3. Jika tadi Paid, bayar ulang (Re-Payment)
+                //dd($value['no_payment']);
                 if ($value['no_payment'] != "kosong") {
                     //dd("create");
                     self::createPayments($value['parentId']);
+                    self::deletedRowInvoiceId($value['no_payment']);
                 }
 
                 $tot++;
@@ -68,6 +70,15 @@ class InvoicesDuplicateController extends Controller
         }
 
         return response()->json($array, 200);
+    }
+
+
+    public function deletedRowInvoiceId($paymentsId)
+    {
+        $find =  PaymentParams::where('payments_id',$paymentsId)->first();
+        if($find){
+            $find->delete();
+        }
     }
 
     public function getDetailPayment($idPayment,$sales_acount)//account_id_item = sales account on items
@@ -98,10 +109,10 @@ class InvoicesDuplicateController extends Controller
         $invoice_id = $payment["Invoice"]["InvoiceID"];
         $reference_id = "$invoice_id update harga otomatis xero paid";
 
-        self::insertToDb($amount, $account_code, $date, $invoice_id, $reference_id);
+        self::insertToDb($amount, $account_code, $date, $invoice_id, $reference_id,$idPayment);
     }
 
-    public function insertToDb($amount, $account_code, $date, $invoice_id, $reference_id)
+    public function insertToDb($amount, $account_code, $date, $invoice_id, $reference_id,$idPayment)
     {
         // Pakai updateOrCreate agar tidak duplikat jika dijalankan 2x
         PaymentParams::updateOrCreate(
@@ -110,7 +121,8 @@ class InvoicesDuplicateController extends Controller
                 'account_code' => $account_code,
                 'date' => $date, // Pastikan kolom di DB tipe date/string yang sesuai
                 'amount' => $amount,
-                'reference' => $reference_id
+                'reference' => $reference_id,
+                'payments_id'=>$idPayment
             ]
         );
     }
