@@ -9,6 +9,7 @@ use App\Http\Controllers\TaxRateController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\InvoiceItemController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -49,6 +50,8 @@ Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDeta
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
 Route::post('/submitUpdateinvoices', [InvoicesDuplicateController::class, 'updateInvoiceSelected']);//update semua select submit
 
+Route::post('/invoice/item/save', [InvoiceItemController::class, 'saveItem'])->name('invoice.item.save');
+Route::delete('/invoice/item/{id}', [InvoiceItemController::class, 'deleteItem'])->name('invoice.item.delete');
 //tax rate
 Route::get('/tax_rate', [TaxRateController::class, 'getTaxRate']);
 

@@ -87,7 +87,7 @@ class InvoicesController extends Controller
     function xeroDateToPhp($xeroDate, $format = 'Y-m-d') {
         if (empty($xeroDate)) return null;
         preg_match('/\/Date\((-?\d+)/', $xeroDate, $matches);
-    
+
         if (!isset($matches[1])) return null;
         return date($format, $matches[1] / 1000);
     }
@@ -110,7 +110,7 @@ class InvoicesController extends Controller
 
     public function viewDetailInvoice($idInvoice)
     {
-        return view('detail_invoices');
+        return view('detail_invoices2');
     }
 
     public function updateInvoiceSelected(Request $request)
@@ -132,7 +132,7 @@ class InvoicesController extends Controller
                 }
                 $tot++;
                 $array[] = $value['no_invoice'];
-    
+
         }
         return response()->json($array, 200);
     }
@@ -155,7 +155,7 @@ class InvoicesController extends Controller
             $reference_id ="$invoice_id update harga otomatis xero paid";
             self::insertToDb($amount,$account_code,$date, $invoice_id, $reference_id);
             //dd($invoice_id);
-           // $account_code = 
+           // $account_code =
            //  self::insertToDb();
            // return response()->json($response_detail->json() ?: ['message' => 'Xero API Error'], $response_detail->status());
         } catch (\Exception $e) {
@@ -187,7 +187,7 @@ class InvoicesController extends Controller
                     "Code" => $invoice_table->account_code
                 ],
                 "Date" => $invoice_table->date,
-                "Amount" => $invoice_table->amount, 
+                "Amount" => $invoice_table->amount,
                 "Reference" => $invoice_table->reference ?? "Payment via API",
             ]
         ]
@@ -202,7 +202,7 @@ class InvoicesController extends Controller
 
 
     public function updateInvoicePaidPerRows($payment_id)
-    {  
+    {
         $inv = [];
         $update_payment = Http::withHeaders([
             'Authorization' => 'Bearer ' . env('BARER_TOKEN'), // Sebaiknya ganti ke config('xero.token') nanti
@@ -237,7 +237,7 @@ class InvoicesController extends Controller
         //  dd($response_detail);
 
         $all_itemm = [];
-     
+
         foreach ($response_detail['Invoices'] as $key => $value) {//list per paket
             foreach ($value['LineItems'] as $key2 => $value2) {//item tiap paket
                 // $cek_is_update_Qty = $value2['LineItemID'] == $request->line_item_id ? $request->qty_input : $value2['Quantity'];

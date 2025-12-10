@@ -60,7 +60,7 @@
                             <th>Description</th>
                             <th style="width: 80px;">Qty <span class="text-danger">*</span></th>
                             <th style="width: 130px;">Price</th>
-                            <th style="width: 80px;">Disc (%)</th>
+                            <th style="width: 80px;">Disc (Rp)</th>
                             <th style="width: 150px;">Account</th>
                             <th style="width: 120px;">Tax Rate</th>
                             <th style="width: 100px;">Tax Amt</th>
@@ -407,7 +407,7 @@ function generateRowHtml(item = null) {
     list_tax_rate.forEach(tx => {
          const code_tax = tx.TaxType;
         const name_tax = tx.Name;
-         const isSelected_tax_rate = (code_tax == item.TaxType) ? 'selected' : '';
+         const isSelected_tax_rate = item != null ? (code_tax == item.TaxType) ? 'selected' : '' : '';
         itemOptionsTaxRate += `<option value="${code_tax}" ${isSelected_tax_rate}>${name_tax}</option>`;
     });
 
@@ -525,7 +525,7 @@ $(document).ready(function () {
         let taxRate = parseFloat(row.find('.tax-rate').val()) || 0;
 
         let subtotal = qty * price;
-        let afterDisc = subtotal - disc;
+        let afterDisc = subtotal - disc;//((subtotal * disc) / 100);
         let taxAmt = (afterDisc * taxRate) / 100;
 
         row.find('.tax-amount').val(taxAmt.toFixed(2));
