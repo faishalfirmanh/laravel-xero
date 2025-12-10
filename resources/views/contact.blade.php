@@ -96,7 +96,7 @@
                 <div id="contactListContainer">
                     <div class="loader" id="listLoader"></div>
                 </div>
-                
+
                 <table class="table table-striped table-bordered mt-3 d-none" id="contactTable">
                     <thead class="table-dark">
                         <tr>
@@ -124,8 +124,8 @@
     <script>
         $(document).ready(function() {
             // URL endpoint sesuai dengan Lumen route yang telah diperbaiki
-            const LIST_URL = 'api/get-data'; 
-            const CREATE_URL = 'api/create-data'; 
+            const LIST_URL = 'api/get-data';
+            const CREATE_URL = 'api/create-data';
             const BEARER_TOKEN = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjFDQUY4RTY2NzcyRDZEQzAyOEQ2NzI2RkQwMjYxNTgxNTcwRUZDMTkiLCJ0eXAiOiJKV1QiLCJ4NXQiOiJISy1PWm5jdGJjQW8xbkp2MENZVmdWY09fQmsifQ.eyJuYmYiOjE3NjM5NjE1NTIsImV4cCI6MTc2Mzk2MzM1MiwiaXNzIjoiaHR0cHM6Ly9pZGVudGl0eS54ZXJvLmNvbSIsImF1ZCI6Imh0dHBzOi8vaWRlbnRpdHkueGVyby5jb20vcmVzb3VyY2VzIiwiY2xpZW50X2lkIjoiMzZGMDg3MUQyMjMzNERERTg4RDIzRUZFNDBBQjU2MjgiLCJzdWIiOiI4YzY4ZGYyYWMzOGU1ZjU3YjBkN2M0MzgwOGYzZTI1OSIsImF1dGhfdGltZSI6MTc2Mzk2MTUxNywieGVyb191c2VyaWQiOiJkM2RjMjc4YS0wZWUyLTQxMzEtOTA2Yy1iOWUyNjkyZWE4ODQiLCJnbG9iYWxfc2Vzc2lvbl9pZCI6IjU2MDE2ODY1N2M1NTRmNWJiYjhkYTQzNDliZTAxZGUxIiwic2lkIjoiNTYwMTY4NjU3YzU1NGY1YmJiOGRhNDM0OWJlMDFkZTEiLCJhdXRoZW50aWNhdGlvbl9ldmVudF9pZCI6IjlmZDc4NzA1LWVhOTQtNGI2NS1iMjZiLTE4MTFhMWFmYzEwYiIsImp0aSI6IjU0MkJENzlFNzQxRTk3MDkxM0IyMzIyNkU2MkY4MjM3Iiwic2NvcGUiOlsiYWNjb3VudGluZy5jb250YWN0cyIsImFjY291bnRpbmcuY29udGFjdHMucmVhZCIsImFjY291bnRpbmcuc2V0dGluZ3MiLCJhY2NvdW50aW5nLnRyYW5zYWN0aW9ucyIsIm9mZmxpbmVfYWNjZXNzIl0sImFtciI6WyJwd2QiXX0.txZzH2P7a_eSC91ULS_thvbu9hrkCkksFIDA1J3Lpx0N8UB9y62lc-Cb0hkjqJmbSYdKUDVcB0SE-cu3z-5ESet1Rt9b1CHpnTEojieysC8X0wQwZI-y7iMyIA3UThdTLoda9QLI9CAja5llNkMRSpXd3BoCZ2Zwbtpgv6Wf4IGR11K4d2DKKbmOJIB0Scst0uOPipTnIEGjU_BgDNyILvjo5Y6NVe6i4VY_0VYrpoVVChIs5lVlclymYNphkqui6jQcGJ6qdwQJSr9eeC9Gcj33LkjBnRInmVRH_beBKq5HRc4cUy0Rx1TgBcLpAQBuXkiObO_1ffYv8CNzD8TcpA';
 
             const XERO_TENANT_ID = '90a3a97b-3d70-41d3-aa77-586bb1524beb';
@@ -142,13 +142,17 @@
                     url: LIST_URL,
                     type: 'GET',
                     dataType: 'json',
+                    // headers: {
+                    //     "Authorization": "Bearer " +  localStorage.getItem('api_token'),
+                    //     // "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr('content')
+                    // },
                     // Gunakan mode success/error untuk simulasi,
                     // karena ini hanya frontend, kita akan gunakan data dummy response
                     success: function(response) {
                         console.log('ssss',response)
                         $('#listLoader').addClass('d-none');
                         $('#contactTable').removeClass('d-none');
-                        
+
                         // Gunakan data dummy response untuk simulasi
                         // Di aplikasi nyata, Anda akan menggunakan 'response' dari server
                         const dummyResponse = {
@@ -163,9 +167,9 @@
                                 { "ContactID": "b3ae66e8-7174-4692-9e3a-fd6f567e6e1b", "ContactStatus": "ACTIVE", "Name": "dian sasttroo", "EmailAddress": "diansastro@gmaiil.com", "Phones": [ { "PhoneType": "DDI" }, { "PhoneType": "DEFAULT", "PhoneNumber": "182", "PhoneAreaCode": "1", "PhoneCountryCode": "+6281" }, { "PhoneType": "FAX" }, { "PhoneType": "MOBILE" } ], "DefaultCurrency": "IDR" }
                             ]
                         };
-                        
+
                         const contacts = response.Contacts || dummyResponse.Contacts;
-                        
+
                         if (contacts && contacts.length > 0) {
                             let counter = 1;
                             contacts.forEach(contact => {
@@ -216,7 +220,7 @@
                 const $submitBtn = $('#submitBtn');
                 const $submitSpinner = $('#submitSpinner');
                 const $formMessage = $('#formMessage');
-                
+
                 // Ambil data form
                 const formData = {
                     Name: $('#name').val(),
@@ -234,15 +238,15 @@
                 $submitBtn.prop('disabled', true);
                 $submitSpinner.removeClass('d-none');
                 $formMessage.addClass('d-none').removeClass('alert-success alert-danger');
- 
- 
-               
+
+
+
 
 
                 $.ajax({
                     url: CREATE_URL,
                     type: 'POST',
-                    contentType: 'application/json', 
+                    contentType: 'application/json',
                     data: JSON.stringify(payload),
                     headers: {
                         "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")

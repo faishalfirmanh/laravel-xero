@@ -3,12 +3,44 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Services\XeroAuthService;
 use Illuminate\Support\Facades\Http;
 class ProductAndServiceController extends Controller
 {
     public function viewProduct()
     {
         return view('product');
+    }
+
+    private function getTenantId($token)
+    {
+        $config = \App\Models\ConfigSettingXero::first();
+        if($config->xero_tenant_id) return $config->xero_tenant_id;
+
+        $response = Http::withToken($token)->get('https://api.xero.com/connections');
+        $tenantId = $response->json()[0]['tenantId'];
+        $config->update(['xero_tenant_id' => $tenantId]);
+        return $tenantId;
+    }
+
+     public function getProductAllNoBearer(XeroAuthService $xeroService)
+    {
+        try {
+            $token = $xeroService->getToken();
+        } catch (\Exception $e) {
+           return response()->json([
+            'status' => 'error',
+            'message' => 'Detail Error: ' . $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ], 500);
+        }
+        $tenantId = $this->getTenantId($token);
+        $response = Http::withToken($token)
+            ->withHeaders(['xero-tenant-id' => $tenantId])
+            ->get('https://api.xero.com/api.xro/2.0/Items');
+
+        return $response->json();
     }
 
     public function getProduct(Request $request)

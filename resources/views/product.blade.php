@@ -159,6 +159,11 @@
                     </tbody>
                 </table>
             </div>
+            <div class="card-body">
+                <div id="notif_save_checbox">
+                  <div class="loader d-none" id="invoice_update_checkbox"></div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -169,7 +174,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- JQuery and AJAX Logic -->
-    <script src="{{ asset('assets/js/product.js?v.12') }}"></script>
+    <script src="{{ asset('assets/js/product.js?v.312') }}"></script>
     <script>
          // URL endpoint sesuai dengan Lumen route yang telah diperbaiki
           

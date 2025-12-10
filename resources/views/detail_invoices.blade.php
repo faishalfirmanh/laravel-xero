@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xero Clone Invoice Table</title>
-    
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
@@ -31,7 +31,7 @@
                 <i class="fas fa-sync"></i> Load Data from API
             </button>
         </div>
-        
+
         <div class="row mb-4">
             <div class="col-md-3">
                 <label>To</label>
@@ -60,7 +60,7 @@
                             <th>Description</th>
                             <th style="width: 80px;">Qty <span class="text-danger">*</span></th>
                             <th style="width: 130px;">Price</th>
-                            <th style="width: 80px;">Disc (Rp)</th>
+                            <th style="width: 80px;">Disc (%)</th>
                             <th style="width: 150px;">Account</th>
                             <th style="width: 120px;">Tax Rate</th>
                             <th style="width: 100px;">Tax Amt</th>
@@ -76,7 +76,7 @@
                             <td><input type="text" disabled class="form-control"></td>
                             <td><input type="number" class="form-control qty" min="1" value="1"></td>
                             <td><input type="number" disabled class="form-control price" value="0"></td>
-                            <td><input type="number" class="form-control disc" value="0"></td>
+                            <td><input type="number" class="form-control disc" value="0" max="99"></td>
                             <td><select class="form-control account" disabled><option>Select</option></select></td>
                             <td><select class="form-control tax-rate"><option value="0">0%</option></select></td>
                             <td><input type="number" class="form-control tax-amount" readonly value="0"></td>
@@ -133,7 +133,7 @@ let URL_API_DETAIL = '	https://api.xero.com/api.xro/2.0/Invoices/'
     var BASE_URL = "{{ url('/') }}";
 
 let list_agent = [];
-
+let list_tax_rate = [];
 let list_divisi = [];
 
 let availableProducts = [];
@@ -143,9 +143,9 @@ function getAllitems(){
             type: 'GET',
             dataType: 'json',
             success: function (response) {
-             
+
                if(response.Items){
-                availableProducts = response.Items; 
+                availableProducts = response.Items;
                }
             },
             error: function (xhr, status, error) {
@@ -154,6 +154,21 @@ function getAllitems(){
     });
 }
 
+function getAllTaxRate(){
+     $.ajax({
+        url: `${BASE_URL}/api/tax_rate`,
+        type: 'GET',
+        dataType: 'json',
+        success: function (response) {
+            if(response.TaxRates){
+            list_tax_rate = response.TaxRates;
+            }
+        },
+        error: function (xhr, status, error) {
+            console.log("error list tax rate",xhr)
+        }
+    });
+}
 
 function getDevisi(){
      $.ajax({
@@ -161,7 +176,7 @@ function getDevisi(){
             type: 'GET',
             dataType: 'json',
             success: function (response) {
-                list_divisi = response[0]; 
+                list_divisi = response[0];
                 //console.log("devisi", response[0])
             },
             error: function (xhr, status, error) {
@@ -209,6 +224,7 @@ $(document).ready(function() {
     getAgent();
     getDevisi();
     getDataAccount();
+    getAllTaxRate();
 })
 
 
@@ -235,7 +251,7 @@ function getStatusBadge(status) {
 // --- FIX 3: DEFINISIKAN FUNGSI fetch DI GLOBAL SCOPE ---
 function fetchDataDummy() {
     // Simulasi memanggil data dan memasukkannya ke form
-   
+
     console.log('code',code_invoice)
     let urlTarget = `${BASE_URL}/api/getDetailInvoice/${code_invoice}`;
       $.ajax({
@@ -254,7 +270,7 @@ function fetchDataDummy() {
             }
         });
 
-  
+
 }
 
 $(document).on('change', '.item-select', function() {
@@ -273,27 +289,27 @@ $(document).on('change', '.item-select', function() {
 
     // 3. Panggil API Detail Product
     let urlProduct = `${BASE_URL}/api/get-by-id/${itemCode}`;
-    
+
     $.ajax({
         url: urlProduct,
         type: 'GET',
         dataType: 'json',
         success: function(response) {
             console.log("Response Product:", response);
-            
+
             if (response.Items && response.Items.length > 0) {
                 let itemData = response.Items[0];
                 let salesDetails = itemData.SalesDetails;
 
                 // 4. Update Field di Baris Tersebut
                 // .val() untuk input value, pastikan class selector benar
-                
+
                 // Set Price
                 currentRow.find('.price').val(salesDetails.UnitPrice || 0);
-                
+
                 // Set Description
                 currentRow.find('.description').val(itemData.Description || itemData.Name);
-                
+
                 // Set Account (Jika ada dropdown account)
                 if(salesDetails.AccountCode) {
                     currentRow.find('.account').val(salesDetails.AccountCode);
@@ -301,7 +317,7 @@ $(document).on('change', '.item-select', function() {
 
                 // 5. Trigger Kalkulasi Ulang (PENTING)
                 // Kita trigger event 'input' pada price agar fungsi calculateTotal() jalan
-                currentRow.find('.price').trigger('input'); 
+                currentRow.find('.price').trigger('input');
             }
         },
         error: function(xhr, status, error) {
@@ -322,49 +338,50 @@ function generateRowHtml(item = null) {
     const taxAmt = isNew ? 0 : (item.TaxAmount || 0);
     const lineAmt = isNew ? 0 : (item.LineAmount || 0);
     const taxRateVal = (taxAmt > 0) ? "11" : "0";
-   
+
 
 
     //account-----
     let items_option_account = `<option value="">Select Acount</option>`;
     list_account.forEach(account => {
         //console.log(account)
-        const a_code = account.Code; 
-        const a_name = `${account.Code}-${account.Name}-${account.Class}`; 
+        const a_code = account.Code;
+        const a_name = `${account.Code}-${account.Name}-${account.Class}`;
         const a_selected = (a_code == accCode) ? 'selected' : '';
         items_option_account += `<option value="${a_code}" ${a_selected}>${a_name}</option>`;
     });
     //------------
 
     //console.log("account",list_account)
-   
+
     // --- NEW LOGIC: Generate Item Options dynamically ---
     let itemOptionsHtml = `<option value="">Select Item</option>`;
     availableProducts.forEach(product => {
-        const pCode = product.Code; 
-        const pName = product.Name; 
+        const pCode = product.Code;
+        const pName = product.Name;
         const isSelected = (itemCode == pCode) ? 'selected' : '';
         itemOptionsHtml += `<option value="${pCode}" ${isSelected}>${pName}</option>`;
     });
 
-
+    //console.log("list agent",list_agent, 'item generate html ',item)
     let itemOptionsAgent = `<option value="">Select Agent</option>`;
     let itemOptionsDevisi = `<option value="">Select Devisi</option>`;
+    let itemOptionsTaxRate = `<option value="">Select Tax Rate</option>`;
     if(item != null){
         if( item.Tracking.length > 0){
             item.Tracking.forEach((x,y)=>{
-                if(x.Name == "Agent"){   
+                if(x.Name == "Agent"){
                     list_agent.forEach(ag => {
-                        const code_agent = ag.TrackingOptionID; 
-                        const name_agent = ag.Name; 
+                        const code_agent = ag.TrackingOptionID;
+                        const name_agent = ag.Name;
                         //console.log("name agent ",name_agent)
                         const isSelected_agent = (x.TrackingOptionID == code_agent) ? 'selected' : '';
                         itemOptionsAgent += `<option value="${code_agent}" ${isSelected_agent}>${name_agent}</option>`;
                     });
                 }else if(x.Name == "Divisi"){
                     list_divisi.forEach(dev => {
-                        const code_devisi = dev.TrackingOptionID; 
-                        const name_devisi = dev.Name; 
+                        const code_devisi = dev.TrackingOptionID;
+                        const name_devisi = dev.Name;
                         //console.log("name divisi ",name_devisi)
                         const isSelected_devisi = (x.TrackingOptionID == code_devisi) ? 'selected' : '';
                         itemOptionsDevisi += `<option value="${code_devisi}" ${isSelected_devisi}>${name_devisi}</option>`;
@@ -373,20 +390,40 @@ function generateRowHtml(item = null) {
             })
         }
     }
-   
+
+    list_agent.forEach(ag => {
+        const code_agent = ag.TrackingOptionID;
+        const name_agent = ag.Name;
+        itemOptionsAgent += `<option value="${code_agent}" >${name_agent}</option>`;
+    });
+
+    list_divisi.forEach(dev => {
+        const code_devisi = dev.TrackingOptionID;
+        const name_devisi = dev.Name;
+        itemOptionsDevisi += `<option value="${code_devisi}" >${name_devisi}</option>`;
+    });
+
+
+    list_tax_rate.forEach(tx => {
+         const code_tax = tx.TaxType;
+        const name_tax = tx.Name;
+         const isSelected_tax_rate = (code_tax == item.TaxType) ? 'selected' : '';
+        itemOptionsTaxRate += `<option value="${code_tax}" ${isSelected_tax_rate}>${name_tax}</option>`;
+    });
+
     // ----------------------------------------------------
 
     return `
         <tr>
             <td>
                 <select class="form-control item-select">
-                    ${itemOptionsHtml}  
+                    ${itemOptionsHtml}
                 </select>
             </td>
             <td><input type="text" disabled class="form-control description" value="${desc}"></td>
             <td><input type="number" class="form-control qty" value="${qty}" required></td>
             <td><input type="number" disabled class="form-control price" value="${price}"></td>
-            <td><input type="number" class="form-control disc" value="0" placeholder="0"></td>
+            <td><input type="number" class="form-control disc" max="99" value="0" placeholder="0"></td>
             <td>
                 <select class="form-control account">
                     ${items_option_account}
@@ -394,12 +431,11 @@ function generateRowHtml(item = null) {
             </td>
             <td>
                 <select class="form-control tax-rate">
-                    <option value="0" ${taxRateVal == '0' ? 'selected' : ''}>Tax Exempt (0%)</option>
-                    <option value="11" ${taxRateVal == '11' ? 'selected' : ''}>PPN (11%)</option>
+                   ${itemOptionsTaxRate}
                 </select>
             </td>
             <td><input type="number" class="form-control tax-amount" value="${taxAmt}" readonly></td>
-            
+
             <td>
                 <select class="form-control agent">
                    ${itemOptionsAgent}
@@ -412,7 +448,7 @@ function generateRowHtml(item = null) {
             </td>
 
             <td><input type="text" class="form-control amount" disabled readonly value="${lineAmt}"></td>
-            
+
             <td style="min-width: 90px; vertical-align: middle;">
                 <div class="d-flex justify-content-center align-items-center">
                     <button type="button" class="btn btn-sm btn-outline-danger remove-row mr-2" title="Hapus">
@@ -489,7 +525,7 @@ $(document).ready(function () {
         let taxRate = parseFloat(row.find('.tax-rate').val()) || 0;
 
         let subtotal = qty * price;
-        let afterDisc = subtotal - ((subtotal * disc) / 100);
+        let afterDisc = subtotal - disc;
         let taxAmt = (afterDisc * taxRate) / 100;
 
         row.find('.tax-amount').val(taxAmt.toFixed(2));
@@ -497,7 +533,7 @@ $(document).ready(function () {
 
         calculateTotal();
     });
-}); 
+});
 </script>
 
 </body>

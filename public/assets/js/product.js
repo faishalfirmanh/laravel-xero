@@ -83,26 +83,10 @@ $(document).ready(function () {
     function fetchContacts() {
         $('#listLoader').removeClass('d-none');
         $('#contactTable').addClass('d-none');
+        $('#invoice_update_checkbox').addClass('d-none');
         $('#contactTableBody').empty();
 
 
-        // $.ajax({
-        //     url: `api/get-invoices`,
-        //     type: 'GET',
-        //     dataType: 'json',
-        //     success: function(data, textStatus, xhr) {
-        //          if(xhr.status == 'success'){
-
-        //             $('#notif').
-        //             html('<div class="alert alert-primary" role="alert">data tersingkronisasi</div>');
-        //          }
-
-
-        //     },
-        //     error: function(xhr, status, error) {
-        //         console.log('error',xhr)
-        //     }
-        // });
 
         $.ajax({
             url: LIST_URL,
@@ -160,17 +144,17 @@ $(document).ready(function () {
     $("#btnSaveInvoice").on('click', function (e) {
         let harga_update = $("#UnitPrice").val()
         let id_account_item = $("#account_id_item").val();
+        $('#invoice_update_checkbox').removeClass('d-none');
         let selectedItems = [];
         $('.invoice-checkbox:checked').each(function () {
             let checkbox = $(this);
-            console.log('checkbox',checkbox)
+           // console.log('checkbox',checkbox)
             let data = {
                 key: checkbox.val(), // Mengambil value="${key}"
                 combinedInfo: checkbox.data('no-invoice'),
                 amount: checkbox.data('amount')
             };
             let parts = String(data.combinedInfo).split('_');
-            console.log('xxaaa0',parts)
             data.parentId = parts[0];
             data.lineItemId = parts[1];
             data.status = parts[2];
@@ -184,8 +168,7 @@ $(document).ready(function () {
             alert('Harap pilih minimal satu invoice!');
             return;
         }
-      //  console.log("accountid",$("#account_id_item").val())
-        // 4. Lihat Hasil di Console
+   
         $.ajax({
             url: 'api/submitUpdateinvoices',
             type: 'POST',
@@ -196,14 +179,37 @@ $(document).ready(function () {
                 account_id_item: id_account_item
             }),
             success: function (response) {
-                console.log(response)
+                console.log("submit save",response)
+                var notifContainer = $('#notif_save_checbox');
+                notifContainer.empty();
+                var listItems = '';
+                $.each(response, function(index, item) {
+                    listItems += `<li>Invoice <strong>${item.no_invoice}</strong> : ${item.status}</li>`;
+                });
+                var alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <strong>Update Berhasil!</strong>
+                        <ul class="mb-0 pl-3 mt-1">
+                            ${listItems}
+                        </ul>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                `;
+                notifContainer.html(alertHtml);
+                // setTimeout(function() {
+                //     notifContainer.fadeOut('slow', function(){
+                //         $(this).empty().show(); // Reset container
+                //     });
+                // }, 5000);
+                $('#invoice_update_checkbox').addClass('d-none');
             },
             error: function (xhr, err) {
 
             }
         })
-        console.log('Data Terpilih:', selectedItems);
-        console.log('harga', harga_update)
+       
     })
 
     function fetchDataInvoice(idPaket) {

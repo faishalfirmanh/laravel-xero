@@ -5,6 +5,8 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\InvoicesController;
 use App\Http\Controllers\InvoicesDuplicateController;
 use App\Http\Controllers\ProductAndServiceController;
+use App\Http\Controllers\TaxRateController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Http\Request;
@@ -14,16 +16,26 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+
 
 Route::get('getCodeBeforeToken', [ConfigController::class, 'getAuthUrl']);
 Route::post('getToken', [ConfigController::class, 'getToken']);
+Route::get('/xero/login', [ConfigController::class, 'redirect']);
+Route::get('/xero/callback', [ConfigController::class, 'callback']);
 
 Route::post('/create-data', [ContactController::class, 'createContact']);
-Route::get('/get-data', [ContactController::class, 'getContact']);
 
-//proudct
+
+
 Route::post('/save-data-product', [ProductAndServiceController::class, 'updateProduct']);
+//Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/get-data', [ContactController::class, 'getContact']);
+//});
+//proudct
 Route::get('/get-data-product', [ProductAndServiceController::class, 'getProduct']);
+Route::get('/get-data-no-limit', [ProductAndServiceController::class, 'getProductAllNoBearer']);
 Route::get('/get-by-id/{id}', [ProductAndServiceController::class, 'getProductById']);
 
 //payment
@@ -35,9 +47,12 @@ Route::post('/createPayments', [PaymentController::class, 'createPayments']);
 Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaket']);
 Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDetailInvoice']);
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
-Route::post('/submitUpdateinvoices', [InvoicesDuplicateController::class, 'updateInvoiceSelected']);
+Route::post('/submitUpdateinvoices', [InvoicesDuplicateController::class, 'updateInvoiceSelected']);//update semua select submit
 
-//kategory
+//tax rate
+Route::get('/tax_rate', [TaxRateController::class, 'getTaxRate']);
+
+//kategory (tracking)
 Route::get('/get_divisi', [TrackingController::class, 'getKategory']);
 Route::get('/get_agent', [TrackingController::class, 'getAgent']);
 

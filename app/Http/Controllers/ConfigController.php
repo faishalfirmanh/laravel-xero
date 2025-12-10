@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Servics\ConfigXero;
+use App\Models\ConfigSettingXero;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
@@ -10,6 +11,59 @@ use Str;
 class ConfigController extends Controller
 {
 
+
+    public function redirect()
+    {
+        $config = ConfigSettingXero::first();
+        if (!$config) return "Config belum diisi di database";
+
+        // SCOPE 'offline_access' ADALAH KUNCI AGAR TOKEN BISA DI-REFRESH
+        $scope = 'offline_access accounting.contacts accounting.settings';
+        
+        $url = "https://login.xero.com/identity/connect/authorize?" . http_build_query([
+            'response_type' => 'code',
+            'client_id' => $config->client_id,
+            'redirect_uri' => $config->redirect_url,
+            'scope' => $scope,
+            'state' => '12sx233'
+        ]);
+
+        return redirect($url);
+    }
+
+    public function callback(Request $request)
+    {
+        $config = ConfigSettingXero::first();
+        $code = $request->input('code');
+
+        if (!$code) return "Gagal mendapatkan Authorization Code";
+
+        $response = Http::asForm()
+            ->withBasicAuth($config->client_id, $config->client_secret)
+            ->post('https://identity.xero.com/connect/token', [
+                'grant_type' => 'authorization_code',
+                'code' => 't2CSDHEm3D4qgur7N8HYkuIpZKCs_buPkLmmZ8CThfs',
+                'redirect_uri' => $config->redirect_url,
+            ]);
+
+        $data = $response->json();
+
+        if (isset($data['error'])) {
+            return response()->json($data);
+        }
+
+        $config->update([
+            'access_token'  => $data['access_token'],
+            'barer_token'   => $data['access_token'], // Duplicate sesuai kolom Anda
+            'refresh_token' => $data['refresh_token'],
+            'id_token'      => $data['id_token'] ?? null,
+            'code'          => $code, // Opsional disimpan
+            'xero_tenant_id'=> null, // Nanti diambil terpisah atau dari API connection
+            'expires_at'    => Carbon::now()->addSeconds($data['expires_in']),
+        ]);
+
+        return "Berhasil! Token tersimpan. Siap digunakan.";
+    }
 
     public function getToken(Request $request)
     {
