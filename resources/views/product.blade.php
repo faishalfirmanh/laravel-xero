@@ -76,7 +76,7 @@
                             </button>
                         </div>
                         <div class="col-12" id="notif">
-                            
+
                         </div>
                     </div>
                 </form>
@@ -85,39 +85,52 @@
         </div>
 
         <!-- CONTACT LIST TABLE -->
-        <div class="card shadow">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                Daftar Kontak
-                <button class="btn btn-light btn-sm" id="refreshBtn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .917-.184A6 6 0 1 1 8 2z"/>
-                        <path d="M8 4.464a.5.5 0 0 1 .5.5v3.427a.5.5 0 0 1-.5.5zM8 10a.5.5 0 0 1-.5-.5V6.073a.5.5 0 0 1 1 0v3.427a.5.5 0 0 1-.5.5z"/>
-                    </svg>
-                    Refresh Data
-                </button>
-            </div>
-            <div class="card-body">
-                <div id="contactListContainer">
-                    <div class="loader" id="listLoader"></div>
-                </div>
-                
-                <table class="table table-striped table-bordered mt-3 d-none" id="contactTable">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>#</th>
-                            <th>Nama Paket</th>
-                            <th>Code</th>
-                            <th>Harga</th>
-                             <th>Penjelasan</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contactTableBody">
-                        <!-- Data akan diisi oleh JQuery/AJAX -->
-                    </tbody>
-                </table>
-            </div>
+     <div class="card shadow">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Daftar Products dan Services</h5>
+        <div class="d-flex gap-2">
+            <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search Code/Name...">
+
+            <button class="btn btn-info btn-sm" id="searchBtn">
+                <i class="bi bi-search"></i> Cari
+            </button>
+
+            <button class="btn btn-light btn-sm" id="refreshBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .917-.184A6 6 0 1 1 8 2z"/>
+                    <path d="M8 4.464a.5.5 0 0 1 .5.5v3.427a.5.5 0 0 1-.5.5zM8 10a.5.5 0 0 1-.5-.5V6.073a.5.5 0 0 1 1 0v3.427a.5.5 0 0 1-.5.5z"/>
+                </svg>
+                Refresh
+            </button>
         </div>
+    </div>
+    <div class="card-body">
+        <div id="contactListContainer">
+            <div class="loader d-none" id="listLoader">.</div>
+        </div>
+
+        <table class="table table-striped table-bordered mt-3 d-none" id="contactTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Nama Paket</th>
+                    <th>Code</th>
+                    <th>Harga</th>
+                    <th>Penjelasan</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="contactTableBody">
+                </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3" id="paginationControls">
+            <button class="btn btn-secondary btn-sm" id="prevPageBtn" disabled>Previous</button>
+            <span>Page <span id="currentPageDisplay">1</span></span>
+            <button class="btn btn-secondary btn-sm" id="nextPageBtn">Next</button>
+        </div>
+    </div>
+</div>
 
 
         <div class="card shadow mb-5">
@@ -155,13 +168,14 @@
                         </tr>
                     </thead>
                     <tbody id="invoiceTableBody">
-            
+
                     </tbody>
                 </table>
             </div>
             <div class="card-body">
                 <div id="notif_save_checbox">
                   <div class="loader d-none" id="invoice_update_checkbox"></div>
+
                 </div>
             </div>
         </div>
@@ -177,7 +191,7 @@
     <script src="{{ asset('assets/js/product.js?v.312') }}"></script>
     <script>
          // URL endpoint sesuai dengan Lumen route yang telah diperbaiki
-          
+
     </script>
 
 </body>

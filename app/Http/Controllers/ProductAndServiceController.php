@@ -43,24 +43,45 @@ class ProductAndServiceController extends Controller
         return $response->json();
     }
 
-    public function getProduct(Request $request)
-    {
-        try {
-            // Panggilan dilakukan dari SISI SERVER, BUKAN BROWSER
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->get('https://api.xero.com/api.xro/2.0/Items');
+   public function getProduct(Request $request)
+{
+    try {
+        // 1. Ambil parameter page dan search dari request client
+        $page = $request->query('page', 1); // Default page 1
+        $search = $request->query('search', ''); // Default kosong
 
-            // Mengembalikan respons Xero, termasuk status code (misalnya 200, 400, 401)
-            return response()->json($response->json() ?: ['message' => 'Xero API Error'], $response->status());
+        // 2. Siapkan parameter query untuk Xero
+        $queryParams = [
+            'page' => $page,
+        ];
 
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], 500);
+        // 3. Tambahkan filter search jika ada
+        // Xero menggunakan parameter 'where' untuk filtering
+        if (!empty($search)) {
+            // Mencari berdasarkan Code atau Name (Case Sensitive di Xero)
+            // Contoh: Code.Contains("Air") OR Name.Contains("Air")
+            $queryParams['where'] = 'Code.Contains("' . $search . '") OR Name.Contains("' . $search . '")';
         }
+
+        // 4. Panggil Xero API
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
+            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->get('https://api.xero.com/api.xro/2.0/Items', $queryParams);
+
+        // 5. Kembalikan respons
+        // Kita kirimkan data page saat ini juga agar frontend tahu
+        $data = $response->json();
+        $data['current_page'] = (int)$page;
+
+        return response()->json($data ?: ['message' => 'Xero API Error'], $response->status());
+
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], 500);
     }
+}
 
     public function getProductById($productId)
     {

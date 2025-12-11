@@ -3,7 +3,8 @@ const CREATE_URL = 'api/save-data-product';
 const URL_INVOICE = 'api/getInvoiceByIdPaket/'
 const URL_DETAIL_Item = 'api/get-by-id/'
 const baseUrlOrigin = window.location.origin;
-
+let currentPage = 1;
+let currentSearch = '';
 
 function getDataEdit(id) {
     $.ajax({
@@ -67,6 +68,32 @@ function formatRupiah(angka) {
 }
 $(document).ready(function () {
 
+    $('#searchBtn').click(function() {
+        currentSearch = $('#searchInput').val();
+        currentPage = 1; // Reset ke halaman 1 saat search baru
+        fetchContacts();
+    });
+
+
+    $('#searchInput').keypress(function(e) {
+        if(e.which == 13) {
+            currentSearch = $(this).val();
+            currentPage = 1;
+            fetchContacts();
+        }
+    });
+
+    $('#nextPageBtn').click(function() {
+        currentPage++;
+        fetchContacts();
+    });
+
+    $('#prevPageBtn').click(function() {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchContacts();
+        }
+    });
 
     $('#checkAll').on('change', function () {
         let isChecked = $(this).prop('checked');
@@ -81,65 +108,85 @@ $(document).ready(function () {
 
 
     function fetchContacts() {
-        $('#listLoader').removeClass('d-none');
-        $('#contactTable').addClass('d-none');
-        $('#invoice_update_checkbox').addClass('d-none');
-        $('#contactTableBody').empty();
+    $('#listLoader').removeClass('d-none');
+    $('#contactTable').addClass('d-none');
+    $('#contactTableBody').empty();
 
+    // Disable buttons saat loading
+    $('#prevPageBtn, #nextPageBtn').prop('disabled', true);
 
+    $.ajax({
+        url: LIST_URL, // Pastikan variabel ini mengarah ke route controller Anda
+        type: 'GET',
+        dataType: 'json',
+        data: {
+            page: currentPage,
+            search: currentSearch
+        },
+        success: function (response) {
+            $('#listLoader').addClass('d-none');
+            $('#contactTable').removeClass('d-none');
 
-        $.ajax({
-            url: LIST_URL,
-            type: 'GET',
-            dataType: 'json',
-            // Gunakan mode success/error untuk simulasi,
-            // karena ini hanya frontend, kita akan gunakan data dummy response
-            success: function (response) {
-               // console.log('ssss', response)
-                $('#listLoader').addClass('d-none');
-                $('#contactTable').removeClass('d-none');
+            // Update Page Display
+            $('#currentPageDisplay').text(currentPage);
 
+            const contacts = response.Items;
 
-                const contacts = response.Items;// || dummyResponse.Contacts;
+            if (contacts && contacts.length > 0) {
+                let counter = ((currentPage - 1) * 100) + 1; // Xero default 100 items per page
 
-                if (contacts && contacts.length > 0) {
-                    let counter = 1;
-                    contacts.forEach(contact => {
-                        // Cari nomor telepon DEFAULT
-                        const defaultPhone = contact.Phones ? contact.Phones.find(p => p.PhoneType === 'DEFAULT') : null;
-                        const phoneNumber = defaultPhone && defaultPhone.PhoneNumber ? `${defaultPhone.PhoneNumber}` : '-';
+                contacts.forEach(contact => {
+                    const price = contact.SalesDetails && contact.SalesDetails.UnitPrice
+                                  ? formatRupiah(contact.SalesDetails.UnitPrice)
+                                  : '0';
 
-                        // Tentukan badge status
-                        const statusClass = contact.ContactStatus === 'ACTIVE' ? 'bg-success' : 'bg-secondary';
-                        const statusBadge = `<span class="badge ${statusClass}">${contact.ContactStatus}</span>`;
+                    const description = contact.Description
+                                        ? contact.Description.substring(0, 50) + (contact.Description.length > 50 ? '...' : '')
+                                        : '-';
 
-                        // Buat baris tabel
-                        const row = `
-                                    <tr>
-                                        <td>${counter++}</td>
-                                        <td>${contact.Name || '-'}</td>
-                                        <td>${contact.Code || '-'}</td>
-                                        <td>Rp. ${formatRupiah(contact.SalesDetails.UnitPrice)}</td>
-                                        <td>${contact.Description}</td>
-                                        <td><button type="button" onclick="getDataEdit('${contact.ItemID}')" class="btn btn-primary">Edit</button></td>
-                                    </tr>
-                                `;
-                        $('#contactTableBody').append(row);
-                    });
+                    const row = `
+                        <tr>
+                            <td>${counter++}</td>
+                            <td>${contact.Name || '-'}</td>
+                            <td>${contact.Code || '-'}</td>
+                            <td>Rp. ${price}</td>
+                            <td>${description}</td>
+                            <td>
+                                <button type="button" onclick="getDataEdit('${contact.ItemID}')" class="btn btn-primary btn-sm">Edit</button>
+                            </td>
+                        </tr>
+                    `;
+                    $('#contactTableBody').append(row);
+                });
+
+                // Logic Tombol Next
+                // Jika jumlah data yang diterima kurang dari 100 (limit default Xero), berarti sudah halaman terakhir
+                if (contacts.length < 100) {
+                    $('#nextPageBtn').prop('disabled', true);
                 } else {
-                    $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data kontak yang ditemukan.</td></tr>');
+                    $('#nextPageBtn').prop('disabled', false);
                 }
-                //
-                // $('#listInvoiceLoader').addClass('d-none');
-            },
-            error: function (xhr, status, error) {
-                $('#listLoader').addClass('d-none');
-                $('#contactTable').removeClass('d-none');
-                console.error("Error fetching contacts:", error, status, xhr);
-                $('#contactTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data kontak dari server.</td></tr>');
+
+            } else {
+                $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data ditemukan.</td></tr>');
+                $('#nextPageBtn').prop('disabled', true); // Tidak ada data, matikan next
             }
-        });
-    }
+
+            // Logic Tombol Prev
+            if (currentPage > 1) {
+                $('#prevPageBtn').prop('disabled', false);
+            } else {
+                $('#prevPageBtn').prop('disabled', true);
+            }
+        },
+        error: function (xhr, status, error) {
+            $('#listLoader').addClass('d-none');
+            $('#contactTable').removeClass('d-none');
+            console.error("Error fetching contacts:", error);
+            $('#contactTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data dari server.</td></tr>');
+        }
+    });
+}
 
     $("#btnSaveInvoice").on('click', function (e) {
         let harga_update = $("#UnitPrice").val()
@@ -168,7 +215,7 @@ $(document).ready(function () {
             alert('Harap pilih minimal satu invoice!');
             return;
         }
-   
+
         $.ajax({
             url: 'api/submitUpdateinvoices',
             type: 'POST',
@@ -209,7 +256,7 @@ $(document).ready(function () {
 
             }
         })
-       
+
     })
 
     function fetchDataInvoice(idPaket) {
@@ -239,11 +286,11 @@ $(document).ready(function () {
                 let counter = 1;
 
                 response.forEach((item, key) => {
-                    
+
                     // 1. Format Tanggal (Indo)
                     let date = formatDateIndo(item.tanggal);
                     let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
-                 
+
                     // 2. Format Rupiah
                     let nominalPaid = formatRupiah(item.amount_paid);
 
@@ -252,9 +299,9 @@ $(document).ready(function () {
                     let price_afer_save = $("#unit_price_save").val();
                     let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
                     let url = $(this).data('url');
-                   
+
                     let cek_item_payment = item.payment.length > 0 ? item.payment[0].PaymentID : 'kosong';
-                   
+
                     // 4. Susun HTML Row
                     rows += `
                                         <tr>
@@ -272,9 +319,9 @@ $(document).ready(function () {
                                                     Detail
                                                 </a>
                                                 <div class="form-check d-flex justify-content-center">
-                                                    <input class="form-check-input invoice-checkbox" 
-                                                        type="checkbox" 
-                                                        value="${key}" 
+                                                    <input class="form-check-input invoice-checkbox"
+                                                        type="checkbox"
+                                                        value="${key}"
                                                         id="cb_${key}"
                                                         data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}_${cek_item_payment}"
                                                         data-amount="${price_afer_save}">
@@ -326,7 +373,7 @@ $(document).ready(function () {
             error: function (xhr) {
                 console.log('error', xhr)
                 // Tampilkan pesan error
-             
+
             }
         });
     }

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\PaymentParams;
-use Illuminate\Support\Facades\Log; 
+use Illuminate\Support\Facades\Log;
 
 class InvoicesDuplicateController extends Controller
 {
@@ -33,7 +33,7 @@ class InvoicesDuplicateController extends Controller
                     Log::info("Status: Ada Payment (" . $value['no_payment'] . "). Melakukan Backup & Void.");
                     self::getDetailPayment($value['no_payment']);
                     self::updateInvoicePaidPerRows($value['no_payment']);
-                    sleep(2); 
+                    sleep(2);
                 }
 
                 // Update Item
@@ -41,7 +41,7 @@ class InvoicesDuplicateController extends Controller
                 self::updateInvoicePerRows($value['parentId'], $data['price_update'], $value['lineItemId']);
 
                 if ($hasPayment) {
-                    usleep(500000); 
+                    usleep(500000);
                     Log::info("Status: Restore Payment...");
                     self::createPayments($value['parentId'], $value['no_payment']);
                     self::deletedRowInvoiceId($value['no_payment']);
@@ -83,7 +83,7 @@ class InvoicesDuplicateController extends Controller
 
         self::insertToDb(
             $payment["Amount"],
-            $payment['Account']['Code'] ?? $payment['Account']['AccountID'], 
+            $payment['Account']['Code'] ?? $payment['Account']['AccountID'],
             self::xeroDateToPhp($payment["Date"]),
             $payment["Invoice"]["InvoiceID"],
             $payment["Reference"] ?? "Re-payment api",
@@ -93,7 +93,7 @@ class InvoicesDuplicateController extends Controller
 
     public function insertToDb($amount, $account_code, $date, $invoice_id, $reference_id, $idPayment) {
         PaymentParams::updateOrCreate(
-            ['payments_id' => $idPayment], 
+            ['payments_id' => $idPayment],
             ['invoice_id' => $invoice_id, 'account_code' => $account_code, 'date' => $date, 'amount' => $amount, 'reference' => $reference_id]
         );
     }
@@ -115,7 +115,7 @@ class InvoicesDuplicateController extends Controller
     // --- BAGIAN KRUSIAL (DEBUGGING LOGIC) ---
     public function updateInvoicePerRows($parent_id, $amount_input, $line_item_id) {
         $cleanId = str_replace('"', '', $parent_id);
-        
+
         // 1. Cek Status Invoice
         $maxRetries = 3;
         $attempt = 0;
@@ -154,7 +154,7 @@ class InvoicesDuplicateController extends Controller
 
         foreach ($data['Invoices'] as $inv) {
             foreach ($inv['LineItems'] as $item) {
-                
+
                 // DEBUG: Log setiap item yang ada di invoice ini
                 Log::info("Cek Item Xero ID: " . $item['LineItemID'] . " | Amount Asli: " . $item['UnitAmount']);
 
@@ -173,7 +173,7 @@ class InvoicesDuplicateController extends Controller
                     'UnitAmount' => $newAmount,
                     'Quantity' => $item['Quantity'],
                 ];
-                
+
                 // Masukkan field wajib lain
                 if (isset($item['ItemCode'])) $payload['ItemCode'] = $item['ItemCode'];
                 if (isset($item['AccountCode'])) $payload['AccountCode'] = $item['AccountCode'];
@@ -203,11 +203,12 @@ class InvoicesDuplicateController extends Controller
             Log::error("Gagal Update API: " . $resUpdate->body());
             throw new \Exception("Gagal Update Invoice: " . $resUpdate->body());
         }
-        
+
         Log::info("Berhasil Update Invoice. Response Xero: " . $resUpdate->status());
     }
 
     public function createPayments($invoice_id, $old_payment_id) {
+        //cek kode ini apakah bisa bayar lebih dari yang di bayarkan
         // ... (Kode sama, pastikan logika amountDue tetap ada) ...
         $backup = PaymentParams::where('payments_id', $old_payment_id)->first();
         if (!$backup) return;
@@ -220,10 +221,17 @@ class InvoicesDuplicateController extends Controller
 
         $payAmount = (float)$backup->amount;
 
+        $totNya = 0;
         if ($resInv->successful()) {
+
+           foreach ($resInv['Invoices'] as $key => $value) {
+                foreach ($value["LineItems"] as $key2 => $value2) {
+                  $totNya +=(float)  $value2["LineAmount"];
+                }
+           }
             $invData = $resInv->json();
             $due = (float)$invData['Invoices'][0]['AmountDue'];
-            
+            // dd($resInv);
             Log::info("Create Payment: Backup Amount: $payAmount | Tagihan Xero (Due): $due");
 
             if ($payAmount > $due) {
@@ -231,6 +239,7 @@ class InvoicesDuplicateController extends Controller
                 $payAmount = $due;
             }
         }
+        //dd($totNya);
 
         if ($payAmount <= 0) return;
 
@@ -244,11 +253,11 @@ class InvoicesDuplicateController extends Controller
                 "Invoice" => ["InvoiceID" => $invoice_id],
                 "Account" => ["Code" => $backup->account_code],
                 "Date" => $backup->date,
-                "Amount" => $payAmount,
+                "Amount" =>$totNya, //$payAmount,
                 "Reference" => $backup->reference
             ]]
         ]);
-        
+
         if ($resPay->failed()) throw new \Exception("Gagal Restore Payment: " . $resPay->body());
     }
 }
