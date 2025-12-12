@@ -30,6 +30,7 @@
             <button class="btn btn-primary btn-sm" onclick="fetchDataDummy()">
                 <i class="fas fa-sync"></i> Load Data from API
             </button>
+            <input type="hidden" id="val_status"/>
         </div>
 
         <div class="row mb-4">
@@ -97,7 +98,7 @@
                         <i class="fas fa-plus"></i> Add a new line
                     </button>
                     <br>
-                    <button type="submit" class="btn btn-success mt-3">Save Invoice</button>
+                    {{-- <button type="submit" class="btn btn-success mt-3">Save Invoice</button> --}}
                 </div>
                 <div class="col-md-6 text-right totals-section">
                     <div class="row">
@@ -346,6 +347,7 @@
                         let data_invoice = response.Invoices[0];
                         getStatusBadge(data_invoice.Status);
                         loadInvoiceToForm(data_invoice);
+                        $("#val_status").val(data_invoice.Status)
                     }
                 },
                 error: function (xhr) {
@@ -483,7 +485,8 @@
             tax_type: row.find('.tax-rate').val(),
 
             agent_id: row.find('.agent').val(),   // Kirim ID Agent
-            divisi_id: row.find('.devisi').val()
+            divisi_id: row.find('.devisi').val(),
+            status_invoice : $("#val_status").val()
             // agent & divisi bisa ditambahkan sesuai kebutuhan Controller
         };
 

@@ -226,25 +226,47 @@ $(document).ready(function () {
                 account_id_item: id_account_item
             }),
             success: function (response) {
-                console.log("submit save",response)
                 var notifContainer = $('#notif_save_checbox');
                 notifContainer.empty();
-                var listItems = '';
-                $.each(response, function(index, item) {
-                    listItems += `<li>Invoice <strong>${item.no_invoice}</strong> : ${item.status}</li>`;
-                });
-                var alertHtml = `
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <strong>Update Berhasil!</strong>
-                        <ul class="mb-0 pl-3 mt-1">
-                            ${listItems}
-                        </ul>
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                `;
-                notifContainer.html(alertHtml);
+               // if(response.errors < 1){
+                        var listItems = '';
+                        $.each(response, function(index, item) {
+                            listItems += `<li>Invoice <strong>${item.no_invoice}</strong> : ${item.status}</li>`;
+                        });
+                        var alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <strong>Update Berhasil!</strong>
+                                <ul class="mb-0 pl-3 mt-1">
+                                    ${listItems}
+                                </ul>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        notifContainer.html(alertHtml);
+               // }else{
+                //     var alertHtml = ``
+                //     var listItems = '';
+                //     $.each(response, function(index, item) {
+                //         console.log("error get inv",item)
+                //         listItems += `<li>Invoice <strong>${item.no_invoice}</strong> :</li>`;
+                //     });
+                //      var alertHtml = `
+                //         <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                //             <strong>Update Gagal!</strong>
+                //             <ul class="mb-0 pl-3 mt-1">
+                //                 ${listItems}
+                //             </ul>
+                //             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                //                 <span aria-hidden="true">&times;</span>
+                //             </button>
+                //         </div>
+                //     `;
+                //      notifContainer.html(alertHtml);
+                //      console.log("erros",response)
+                // }
+
                 // setTimeout(function() {
                 //     notifContainer.fadeOut('slow', function(){
                 //         $(this).empty().show(); // Reset container
@@ -340,7 +362,7 @@ $(document).ready(function () {
             error: function (xhr, status, error) {
                 $('#listInvoiceLoader').addClass('d-none');
                 $('#invoiceTable').removeClass('d-none');
-                console.error("Error fetching data:", error, status, xhr);
+                console.error("Error fetching data: get invoice by id paket", error, status, xhr);
 
                 // Perbaikan: Target ke tbody, jangan ke table ID agar header tidak hilang
                 $('#invoiceTableBody').html('<tr><td colspan="8" class="text-center text-danger">Gagal mengambil data invoice dari server.</td></tr>');

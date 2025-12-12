@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
-
+use App\Http\Controllers\InvoicesDuplicateController;
 class InvoiceItemController extends Controller
 {
 private $xeroBaseUrl = 'https://api.xero.com/api.xro/2.0/Invoices';
@@ -25,6 +25,14 @@ private $xeroBaseUrl = 'https://api.xero.com/api.xro/2.0/Invoices';
         ];
     }
 
+    public function savePaid($payment_id)
+    {
+         $inject_inv = new InvoicesDuplicateController();
+         $inject_inv->getDetailPayment($payment_id);
+         $inject_inv->updateInvoicePaidPerRows($payment_id);
+         sleep(2);
+    }
+
    public function saveItem(Request $request)
 {
     // 1. Validasi Input
@@ -37,6 +45,7 @@ private $xeroBaseUrl = 'https://api.xero.com/api.xro/2.0/Invoices';
         // Tambahkan validasi untuk Agent dan Divisi
         'agent_id'     => 'nullable|string',
         'divisi_id'    => 'nullable|string',
+        'status_invoice'=> 'required|string',
     ]);
 
     // Bersihkan ID Invoice

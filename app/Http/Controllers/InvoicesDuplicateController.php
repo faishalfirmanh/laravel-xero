@@ -251,7 +251,8 @@ class InvoicesDuplicateController extends Controller
         ])->post('https://api.xero.com/api.xro/2.0/Payments', [
             "Payments" => [[
                 "Invoice" => ["InvoiceID" => $invoice_id],
-                "Account" => ["Code" => $backup->account_code],
+                // "Account" => ["Code" => $backup->account_code],
+                "Account" => ["AccountID" => $backup->account_code],
                 "Date" => $backup->date,
                 "Amount" =>$totNya, //$payAmount,
                 "Reference" => $backup->reference
