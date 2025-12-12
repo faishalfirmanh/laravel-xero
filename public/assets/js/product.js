@@ -107,88 +107,97 @@ $(document).ready(function () {
     });
 
 
-    function fetchContacts() {
-    $('#listLoader').removeClass('d-none');
-    $('#contactTable').addClass('d-none');
-    $('#contactTableBody').empty();
+        function fetchContacts() {
+            $('#listLoader').removeClass('d-none');
+            $('#contactTable').addClass('d-none');
+            $('#contactTableBody').empty();
 
-    // Disable buttons saat loading
-    $('#prevPageBtn, #nextPageBtn').prop('disabled', true);
+            // Disable buttons saat loading
+            $('#prevPageBtn, #nextPageBtn').prop('disabled', true);
 
-    $.ajax({
-        url: LIST_URL, // Pastikan variabel ini mengarah ke route controller Anda
-        type: 'GET',
-        dataType: 'json',
-        data: {
-            page: currentPage,
-            search: currentSearch
-        },
-        success: function (response) {
-            $('#listLoader').addClass('d-none');
-            $('#contactTable').removeClass('d-none');
+            $.ajax({
+                url: LIST_URL, // Pastikan variabel ini mengarah ke route controller Anda
+                type: 'GET',
+                dataType: 'json',
+                data: {
+                    page: currentPage,
+                    search: currentSearch
+                },
+                success: function (response) {
+                    $('#listLoader').addClass('d-none');
+                    $('#contactTable').removeClass('d-none');
 
-            // Update Page Display
-            $('#currentPageDisplay').text(currentPage);
+                    // Update Page Display
+                    $('#currentPageDisplay').text(currentPage);
 
-            const contacts = response.Items;
+                    const contacts = response.Items;
 
-            if (contacts && contacts.length > 0) {
-                let counter = ((currentPage - 1) * 100) + 1; // Xero default 100 items per page
+                    if (contacts && contacts.length > 0) {
+                        let counter = ((currentPage - 1) * 100) + 1; // Xero default 100 items per page
 
-                contacts.forEach(contact => {
-                    const price = contact.SalesDetails && contact.SalesDetails.UnitPrice
-                                  ? formatRupiah(contact.SalesDetails.UnitPrice)
-                                  : '0';
+                        contacts.forEach(contact => {
+                            const price = contact.SalesDetails && contact.SalesDetails.UnitPrice
+                                        ? formatRupiah(contact.SalesDetails.UnitPrice)
+                                        : '0';
 
-                    const description = contact.Description
-                                        ? contact.Description.substring(0, 50) + (contact.Description.length > 50 ? '...' : '')
-                                        : '-';
+                            const description = contact.Description
+                                                ? contact.Description.substring(0, 50) + (contact.Description.length > 50 ? '...' : '')
+                                                : '-';
 
-                    const row = `
-                        <tr>
-                            <td>${counter++}</td>
-                            <td>${contact.Name || '-'}</td>
-                            <td>${contact.Code || '-'}</td>
-                            <td>Rp. ${price}</td>
-                            <td>${description}</td>
-                            <td>
-                                <button type="button" onclick="getDataEdit('${contact.ItemID}')" class="btn btn-primary btn-sm">Edit</button>
-                            </td>
-                        </tr>
-                    `;
-                    $('#contactTableBody').append(row);
-                });
+                            const row = `
+                                <tr>
+                                    <td>${counter++}</td>
+                                    <td>${contact.Name || '-'}</td>
+                                    <td>${contact.Code || '-'}</td>
+                                    <td>Rp. ${price}</td>
+                                    <td>${description}</td>
+                                    <td>
+                                        <button type="button" onclick="getDataEdit('${contact.ItemID}')" class="btn btn-primary btn-sm">Edit</button>
+                                    </td>
+                                </tr>
+                            `;
+                            $('#contactTableBody').append(row);
+                        });
 
-                // Logic Tombol Next
-                // Jika jumlah data yang diterima kurang dari 100 (limit default Xero), berarti sudah halaman terakhir
-                if (contacts.length < 100) {
-                    $('#nextPageBtn').prop('disabled', true);
-                } else {
-                    $('#nextPageBtn').prop('disabled', false);
+                        // Logic Tombol Next
+                        // Jika jumlah data yang diterima kurang dari 100 (limit default Xero), berarti sudah halaman terakhir
+                        if (contacts.length < 100) {
+                            $('#nextPageBtn').prop('disabled', true);
+                        } else {
+                            $('#nextPageBtn').prop('disabled', false);
+                        }
+
+                    } else {
+                        $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data ditemukan.</td></tr>');
+                        $('#nextPageBtn').prop('disabled', true); // Tidak ada data, matikan next
+                    }
+
+                    // Logic Tombol Prev
+                    if (currentPage > 1) {
+                        $('#prevPageBtn').prop('disabled', false);
+                    } else {
+                        $('#prevPageBtn').prop('disabled', true);
+                    }
+                    //$('#listInvoiceLoader').addClass('d-none');
+                },
+                error: function (xhr, status, error) {
+                    Swal.fire({
+                        title: 'Erros!',
+                        text: `load data product & service ${error}`,
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    })
+                    $('#listLoader').addClass('d-none');
+                    $('#contactTable').removeClass('d-none');
+                    console.error("Error fetching contacts:", error);
+                    $('#contactTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data dari server.</td></tr>');
+                    //$('#listInvoiceLoader').addClass('d-none');
                 }
-
-            } else {
-                $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data ditemukan.</td></tr>');
-                $('#nextPageBtn').prop('disabled', true); // Tidak ada data, matikan next
-            }
-
-            // Logic Tombol Prev
-            if (currentPage > 1) {
-                $('#prevPageBtn').prop('disabled', false);
-            } else {
-                $('#prevPageBtn').prop('disabled', true);
-            }
-        },
-        error: function (xhr, status, error) {
-            $('#listLoader').addClass('d-none');
-            $('#contactTable').removeClass('d-none');
-            console.error("Error fetching contacts:", error);
-            $('#contactTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data dari server.</td></tr>');
+            });
         }
-    });
-}
 
     $("#btnSaveInvoice").on('click', function (e) {
+        $('#fullPageLoader').removeClass('d-none');
         let harga_update = $("#UnitPrice").val()
         let id_account_item = $("#account_id_item").val();
         $('#invoice_update_checkbox').removeClass('d-none');
@@ -276,6 +285,9 @@ $(document).ready(function () {
             },
             error: function (xhr, err) {
 
+            },
+            complete: function() {
+                $('#fullPageLoader').addClass('d-none');
             }
         })
 

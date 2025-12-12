@@ -10,6 +10,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\InvoiceItemController;
+use App\Http\Controllers\XeroContactController;
 use App\Http\Controllers\InvoiceItem2Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,17 @@ Route::get('/xero/login', [ConfigController::class, 'redirect']);
 Route::get('/xero/callback', [ConfigController::class, 'callback']);
 
 Route::post('/create-data', [ContactController::class, 'createContact']);
+
+
+//xero refresh token
+// 1. Route untuk inisiasi login (Jalankan ini saat xero_token.json masih kosong)
+Route::get('/xero/connect', [XeroContactController::class, 'connect']);
+// 2. Route Callback (Wajib sama dengan Redirect URI di Xero Developer)
+Route::get('/xero/callback', [XeroContactController::class, 'callback']);
+// 3. Route untuk melihat data (Ini yang akan dipakai sehari-hari)
+Route::get('/xero/contacts', [XeroContactController::class, 'getContacts']);
+//---------xero refresh token---------
+
 
 
 

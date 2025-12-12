@@ -8,6 +8,8 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">00
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body { background-color: #f6f7f8; padding: 20px; }
@@ -22,6 +24,9 @@
     </style>
 </head>
 <body>
+
+
+
 
 <div class="container-fluid">
     <div class="card p-4">
@@ -324,6 +329,9 @@
         `;
     }
 
+      setTimeout(() => {
+        fetchDataDummy();
+    }, 1000);
     // --- 3. FETCH & DISPLAY DATA ---
     function getStatusBadge(status) {
         let color = 'secondary';
@@ -337,6 +345,7 @@
     }
 
     function fetchDataDummy() {
+       // $('#fullPageLoader').removeClass('d-none');
         let urlTarget = `${BASE_URL}/api/getDetailInvoice/${code_invoice}`;
           $.ajax({
                 url: urlTarget,
@@ -348,10 +357,22 @@
                         getStatusBadge(data_invoice.Status);
                         loadInvoiceToForm(data_invoice);
                         $("#val_status").val(data_invoice.Status)
+                        //$('#fullPageLoaderInv').addClass('d-none');
                     }
                 },
-                error: function (xhr) {
-                    console.error('Error fetching invoice:', xhr);
+                error: function (xhr, status, error) {
+                    console.error('Error fetching invoice:', xhr, status, error);
+                     Swal.fire({
+                        title: 'Erros!',
+                        text: `load data detail invoice ${error}`,
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    })
+
+                },
+                complete: function(e){
+                  //$('#fullPageLoader').addClass('d-none');
+                  //$('#fullPageLoader').css('display', 'none');
                 }
             });
     }
@@ -457,6 +478,14 @@
 
                     calculateRow(currentRow);
                 }
+            },
+            error: function(xhr,status, error){
+                Swal.fire({
+                    title: 'Erros!',
+                    text: `load item product & service ${error}`,
+                    icon: 'error',
+                    confirmButtonText: 'Ok'
+                })
             }
         });
     });
