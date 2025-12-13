@@ -1,24 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
-class XeroContactController extends Controller
+trait ConfigRefreshXero
 {
+    //
+
     private $tokenFile = 'xero_token.json';
 
-    //get tanpa bearer token
-    // =========================================================================
-    // BAGIAN 1: PROSES MENDAPATKAN TOKEN PERTAMA KALI (LOGIN)
-    // =========================================================================
-
-    /**
-     * 1. Redirect User ke Halaman Login Xero
-     */
     public function connect()
     {
         $scope = 'offline_access accounting.contacts accounting.settings';
@@ -30,7 +24,6 @@ class XeroContactController extends Controller
             'scope' => $scope,
             'state' => 'SAFD2142432'
         ]);
-
         return redirect($url);
     }
 
@@ -62,48 +55,18 @@ class XeroContactController extends Controller
         return response()->json($response->json(), 400);
     }
 
-
-    public function getContacts()
-    {
-        // 1. Ambil Token Valid (Otomatis refresh jika expired)
-        $tokenData = $this->getValidToken();
-
-        if (!$tokenData) {
-            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
-        }
-
-        // 2. Ambil Tenant ID (Biasanya ID organisasi pertama)
-        $tenantId = $this->getTenantId($tokenData['access_token']);
-
-        // 3. Request Data Contacts
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $tokenData['access_token'],
-            'Xero-Tenant-Id' => $tenantId,
-            'Accept' => 'application/json'
-        ])->get('https://api.xero.com/api.xro/2.0/Contacts');
-
-        return response()->json($response->json());
-    }
-
-    // =========================================================================
-    // BAGIAN 3: LOGIKA CORE TOKEN (PRIVATE HELPER)
-    // =========================================================================
-
-    /**
-     * Cek apakah token expired, jika ya refresh, jika tidak return yang ada
-     */
     private function getValidToken()
     {
         if (!Storage::exists($this->tokenFile)) {
-            $write_file = [
-                'access_token' => '',
-                'expires_in' => 1800,
-                'token_type' => "Bearer",
-                "refresh_token" => "ojguKUVyFtuzQpYduQKX52GjAAoqrtO3ymG5h08DGqc",
-                "scope" => "accounting.contacts accounting.contacts.read accounting.settings accounting.settings.read accounting.transactions accounting.transactions.read offline_access",
-                "expires_at" => 1765619502
+            // $write_file = [
+            //     'access_token' => '',
+            //     'expires_in' => 1800,
+            //     'token_type' => "Bearer",
+            //     "refresh_token" => "ojguKUVyFtuzQpYduQKX52GjAAoqrtO3ymG5h08DGqc",
+            //     "scope" => "accounting.contacts accounting.contacts.read accounting.settings accounting.settings.read accounting.transactions accounting.transactions.read offline_access",
+            //     "expires_at" => 1765619502
 
-            ];
+            // ];
             // $path = 'private/xero_token.json';
             // Storage::disk('local')->put($path, json_encode($write_file, JSON_PRETTY_PRINT));
             return null;
@@ -126,9 +89,6 @@ class XeroContactController extends Controller
         return $tokens;
     }
 
-    /**
-     * Menukar Refresh Token lama dengan Access Token Baru
-     */
     private function refreshToken($currentRefreshToken)
     {
         $response = Http::asForm()->withBasicAuth(env('XERO_CLIENT_ID'), env('XERO_CLIENT_SECRET'))
@@ -148,9 +108,6 @@ class XeroContactController extends Controller
         return null;
     }
 
-    /**
-     * Simpan token ke File JSON + Tambah Timestamp Expired
-     */
     private function saveToken($tokens)
     {
         // Tambahkan field 'expires_at' manual agar mudah dicek nanti
@@ -176,4 +133,5 @@ class XeroContactController extends Controller
         }
         return null;
     }
+
 }

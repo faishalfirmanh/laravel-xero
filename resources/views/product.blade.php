@@ -131,7 +131,7 @@
                 </tr>
             </thead>
             <tbody id="contactTableBody">
-                </tbody>
+            </tbody>
         </table>
 
         <div class="d-flex justify-content-between align-items-center mt-3" id="paginationControls">

@@ -23,7 +23,15 @@ function getDataEdit(id) {
             });
         },
         error: function (xhr, status, error) {
-            console.log('error', xhr)
+            console.log('eeeeee rrorr', error)
+            Swal.fire({
+                title: 'Erros!',
+                text: `load data by id ${error}`,
+                icon: 'error',
+                confirmButtonText: 'Ok'
+            })
+            // Tampilkan pesan error
+
         }
     });
 }
@@ -68,27 +76,31 @@ function formatRupiah(angka) {
 }
 $(document).ready(function () {
 
-    $('#searchBtn').click(function() {
+    $('#searchBtn').click(function () {
         currentSearch = $('#searchInput').val();
         currentPage = 1; // Reset ke halaman 1 saat search baru
         fetchContacts();
     });
 
 
-    $('#searchInput').keypress(function(e) {
-        if(e.which == 13) {
-            currentSearch = $(this).val();
-            currentPage = 1;
-            fetchContacts();
+    $('#searchInput').keypress(function (e) {
+        if (e.which == 13) { // Kode tombol Enter
+            performSearch();
         }
     });
 
-    $('#nextPageBtn').click(function() {
+    $('#nextPageBtn').click(function () {
         currentPage++;
         fetchContacts();
     });
 
-    $('#prevPageBtn').click(function() {
+    function performSearch() {
+        currentSearch = $('#searchInput').val();
+        currentPage = 1;
+        fetchContacts();
+    }
+
+    $('#prevPageBtn').click(function () {
         if (currentPage > 1) {
             currentPage--;
             fetchContacts();
@@ -107,94 +119,96 @@ $(document).ready(function () {
     });
 
 
-        function fetchContacts() {
-            $('#listLoader').removeClass('d-none');
-            $('#contactTable').addClass('d-none');
-            $('#contactTableBody').empty();
+    function fetchContacts() {
+        $('#listLoader').removeClass('d-none');
+        $('#contactTable').addClass('d-none');
+        $('#contactTableBody').empty();
 
-            // Disable buttons saat loading
-            $('#prevPageBtn, #nextPageBtn').prop('disabled', true);
+        // Disable buttons saat loading
+        $('#prevPageBtn, #nextPageBtn').prop('disabled', true);
 
-            $.ajax({
-                url: LIST_URL, // Pastikan variabel ini mengarah ke route controller Anda
-                type: 'GET',
-                dataType: 'json',
-                data: {
-                    page: currentPage,
-                    search: currentSearch
-                },
-                success: function (response) {
-                    $('#listLoader').addClass('d-none');
-                    $('#contactTable').removeClass('d-none');
+        $.ajax({
+            url: LIST_URL, // Pastikan variabel ini mengarah ke route controller Anda
+            type: 'GET',
+            dataType: 'json',
+            data: {
+                page: currentPage,
+                search: currentSearch
+            },
+            success: function (response) {
+                $('#listLoader').addClass('d-none');
+                $('#contactTable').removeClass('d-none');
 
-                    // Update Page Display
-                    $('#currentPageDisplay').text(currentPage);
+                // Update Page Display dari response server agar sinkron
+                $('#currentPageDisplay').text(response.current_page);
 
-                    const contacts = response.Items;
+                // PERUBAHAN 1: Ambil dari 'data', bukan 'Items'
+                const contacts = response.data;//Items;
+                console.log(contacts)
 
-                    if (contacts && contacts.length > 0) {
-                        let counter = ((currentPage - 1) * 100) + 1; // Xero default 100 items per page
+                if (contacts && contacts.length > 0) {
+                    // PERUBAHAN 2: Counter dikali 10 (sesuai limit controller baru)
+                    let counter = ((currentPage - 1) * 10) + 1;
 
-                        contacts.forEach(contact => {
-                            const price = contact.SalesDetails && contact.SalesDetails.UnitPrice
-                                        ? formatRupiah(contact.SalesDetails.UnitPrice)
-                                        : '0';
+                    contacts.forEach(contact => {
 
-                            const description = contact.Description
-                                                ? contact.Description.substring(0, 50) + (contact.Description.length > 50 ? '...' : '')
-                                                : '-';
+                        const price = contact.SalesDetails && contact.SalesDetails.UnitPrice
+                            ? formatRupiah(contact.SalesDetails.UnitPrice)
+                            : '0';
 
-                            const row = `
-                                <tr>
-                                    <td>${counter++}</td>
-                                    <td>${contact.Name || '-'}</td>
-                                    <td>${contact.Code || '-'}</td>
-                                    <td>Rp. ${price}</td>
-                                    <td>${description}</td>
-                                    <td>
-                                        <button type="button" onclick="getDataEdit('${contact.ItemID}')" class="btn btn-primary btn-sm">Edit</button>
-                                    </td>
-                                </tr>
-                            `;
-                            $('#contactTableBody').append(row);
-                        });
+                        const description = contact.Description
+                            ? contact.Description.substring(0, 50) + (contact.Description.length > 50 ? '...' : '')
+                            : '-';
 
-                        // Logic Tombol Next
-                        // Jika jumlah data yang diterima kurang dari 100 (limit default Xero), berarti sudah halaman terakhir
-                        if (contacts.length < 100) {
-                            $('#nextPageBtn').prop('disabled', true);
-                        } else {
-                            $('#nextPageBtn').prop('disabled', false);
-                        }
+                        const row = `
+                        <tr>
+                            <td>${counter++}</td>
+                            <td>${contact.Name || '-'}</td>
+                            <td>${contact.Code || '-'}</td>
+                            <td>Rp. ${price}</td>
+                            <td>${description}</td>
+                            <td>
+                                <button type="button" onclick="getDataEdit('${contact.ItemID}')" class="btn btn-primary btn-sm">Edit</button>
+                            </td>
+                        </tr>
+                    `;
+                        $('#contactTableBody').append(row);
+                    });
 
+                    // PERUBAHAN 3: Logic Tombol Next menggunakan flag 'has_more' dari Controller
+                    if (response.has_more === true) {
+                        $('#nextPageBtn').prop('disabled', false);
                     } else {
-                        $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data ditemukan.</td></tr>');
-                        $('#nextPageBtn').prop('disabled', true); // Tidak ada data, matikan next
+                        $('#nextPageBtn').prop('disabled', true);
                     }
 
-                    // Logic Tombol Prev
-                    if (currentPage > 1) {
-                        $('#prevPageBtn').prop('disabled', false);
-                    } else {
-                        $('#prevPageBtn').prop('disabled', true);
-                    }
-                    //$('#listInvoiceLoader').addClass('d-none');
-                },
-                error: function (xhr, status, error) {
-                    Swal.fire({
-                        title: 'Erros!',
-                        text: `load data product & service ${error}`,
-                        icon: 'error',
-                        confirmButtonText: 'Ok'
-                    })
-                    $('#listLoader').addClass('d-none');
-                    $('#contactTable').removeClass('d-none');
-                    console.error("Error fetching contacts:", error);
-                    $('#contactTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data dari server.</td></tr>');
-                    //$('#listInvoiceLoader').addClass('d-none');
+                } else {
+                    $('#contactTableBody').append('<tr><td colspan="6" class="text-center">Tidak ada data ditemukan.</td></tr>');
+                    $('#nextPageBtn').prop('disabled', true);
                 }
-            });
-        }
+
+                // Logic Tombol Prev (Tetap sama)
+                if (currentPage > 1) {
+                    $('#prevPageBtn').prop('disabled', false);
+                } else {
+                    $('#prevPageBtn').prop('disabled', true);
+                }
+            },
+            error: function (xhr, status, error) {
+                Swal.fire({
+                    title: 'Erros!',
+                    text: `load data product & service ${error}`,
+                    icon: 'error',
+                    confirmButtonText: 'Ok'
+                })
+                $('#listLoader').addClass('d-none');
+                $('#contactTable').removeClass('d-none');
+                console.error("Error fetching contacts:", error);
+                $('#contactTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data dari server.</td></tr>');
+                //$('#listInvoiceLoader').addClass('d-none');
+            }
+        });
+    }
 
     $("#btnSaveInvoice").on('click', function (e) {
         $('#fullPageLoader').removeClass('d-none');
@@ -204,7 +218,7 @@ $(document).ready(function () {
         let selectedItems = [];
         $('.invoice-checkbox:checked').each(function () {
             let checkbox = $(this);
-           // console.log('checkbox',checkbox)
+            // console.log('checkbox',checkbox)
             let data = {
                 key: checkbox.val(), // Mengambil value="${key}"
                 combinedInfo: checkbox.data('no-invoice'),
@@ -237,12 +251,12 @@ $(document).ready(function () {
             success: function (response) {
                 var notifContainer = $('#notif_save_checbox');
                 notifContainer.empty();
-               // if(response.errors < 1){
-                        var listItems = '';
-                        $.each(response, function(index, item) {
-                            listItems += `<li>Invoice <strong>${item.no_invoice}</strong> : ${item.status}</li>`;
-                        });
-                        var alertHtml = `
+                // if(response.errors < 1){
+                var listItems = '';
+                $.each(response, function (index, item) {
+                    listItems += `<li>Invoice <strong>${item.no_invoice}</strong> : ${item.status}</li>`;
+                });
+                var alertHtml = `
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
                                 <strong>Update Berhasil!</strong>
                                 <ul class="mb-0 pl-3 mt-1">
@@ -253,8 +267,8 @@ $(document).ready(function () {
                                 </button>
                             </div>
                         `;
-                        notifContainer.html(alertHtml);
-               // }else{
+                notifContainer.html(alertHtml);
+                // }else{
                 //     var alertHtml = ``
                 //     var listItems = '';
                 //     $.each(response, function(index, item) {
@@ -286,7 +300,7 @@ $(document).ready(function () {
             error: function (xhr, err) {
 
             },
-            complete: function() {
+            complete: function () {
                 $('#fullPageLoader').addClass('d-none');
             }
         })
@@ -386,8 +400,8 @@ $(document).ready(function () {
     // Panggil fungsi saat halaman pertama kali dimuat
     fetchContacts();
 
-    function fetchDataAccountCodeByItem(idItem){
-         $.ajax({
+    function fetchDataAccountCodeByItem(idItem) {
+        $.ajax({
             url: `${URL_DETAIL_Item}${idItem}`,
             type: 'GET',
             contentType: 'application/json',
@@ -396,16 +410,22 @@ $(document).ready(function () {
             },
             success: function (response) {
                 let item_list = response.Items//[0].SalesDetails.AccountCode
-                item_list.forEach((x)=>{
-                   if(x.SalesDetails.AccountCode){
-                     $("#account_id_item").val(x.SalesDetails.AccountCode)
-                   }else{
-                      $("#account_id_item").val(0)
-                   }
+                item_list.forEach((x) => {
+                    if (x.SalesDetails.AccountCode) {
+                        $("#account_id_item").val(x.SalesDetails.AccountCode)
+                    } else {
+                        $("#account_id_item").val(0)
+                    }
                 })
             },
-            error: function (xhr) {
-                console.log('error', xhr)
+            error: function (xhr, status, error) {
+                console.log('eeeeee rrorr', error)
+                Swal.fire({
+                    title: 'Erros!',
+                    text: `load data by id ${error}`,
+                    icon: 'error',
+                    confirmButtonText: 'Ok'
+                })
                 // Tampilkan pesan error
 
             }
