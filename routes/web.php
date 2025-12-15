@@ -10,7 +10,9 @@ Route::get('/', function () {
     return 'hello dunia';
 });
 
-
+Route::get('/coba_redirect',function(){
+    return "aaa";
+});
 
 Route::get('/contactnya', [ContactController::class, 'viewContackForm']);
 Route::get('/login_view', [HomeController::class, 'getLogin']);

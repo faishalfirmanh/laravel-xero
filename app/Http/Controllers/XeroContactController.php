@@ -6,10 +6,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
-
+use Illuminate\Support\Str;
 class XeroContactController extends Controller
 {
     private $tokenFile = 'xero_token.json';
+    private $tokenFile_prod = 'xero_token_2.json';
 
     //get tanpa bearer token
     // =========================================================================
@@ -23,12 +24,16 @@ class XeroContactController extends Controller
     {
         $scope = 'offline_access accounting.contacts accounting.settings';
 
+        $state = Str::random(64);
+        session(['oauth2_state' => $state]);
+
         $url = 'https://login.xero.com/identity/connect/authorize?' . http_build_query([
             'response_type' => 'code',
-            'client_id' => env('XERO_CLIENT_ID'),
-            'redirect_uri' => env('XERO_REDIRECT_URL'),
+            'client_id' => env('XERO_PROD_CLIENT_ID'),
+            'redirect_uri' => env('XERO_REDIRECT_URL_PROD'),
             'scope' => $scope,
-            'state' => 'SAFD2142432'
+            'state' => '1dfa45sdf',
+            'prompt' => 'consent'
         ]);
 
         return redirect($url);
@@ -43,11 +48,13 @@ class XeroContactController extends Controller
             return 'Gagal: Tidak ada code dari Xero.';
         }
 
-        $response = Http::asForm()->withBasicAuth(env('XERO_CLIENT_ID'), env('XERO_CLIENT_SECRET'))
+        $response = Http::asForm()->withBasicAuth(
+            env('XERO_PROD_CLIENT_ID'),
+            env('XERO_PROD_CLIENT_SECRET'))
             ->post('https://identity.xero.com/connect/token', [
                 'grant_type' => 'authorization_code',
                 'code' => $request->code,
-                'redirect_uri' => env('XERO_REDIRECT_URL'),
+                'redirect_uri' => env('XERO_REDIRECT_URL_PROD'),
             ]);
 
         if ($response->successful()) {
@@ -56,7 +63,7 @@ class XeroContactController extends Controller
             // $res_json = [
             //     "pesan" =>"Koneksi Berhasil! Token tersimpan di storage/app/private/{$this->tokenFile}. Sekarang coba akses /xero/contacts",
             // ];
-            return "Koneksi Berhasil! Token tersimpan di storage/app/private/{$this->tokenFile}. Sekarang coba akses /xero/contacts";
+            return "Koneksi Berhasil! Token tersimpan di storage/app/private/{$this->tokenFile_prod}. Sekarang coba akses /xero/contacts";
         }
 
         return response()->json($response->json(), 400);
@@ -94,7 +101,7 @@ class XeroContactController extends Controller
      */
     private function getValidToken()
     {
-        if (!Storage::exists($this->tokenFile)) {
+        if (!Storage::exists($this->tokenFile_prod)) {
             $write_file = [
                 'access_token' => '',
                 'expires_in' => 1800,
@@ -109,7 +116,7 @@ class XeroContactController extends Controller
             return null;
         }
 
-        $tokens = json_decode(Storage::get($this->tokenFile), true);
+        $tokens = json_decode(Storage::get($this->tokenFile_prod), true);
         if (empty($tokens))
             return null;
 
@@ -131,7 +138,9 @@ class XeroContactController extends Controller
      */
     private function refreshToken($currentRefreshToken)
     {
-        $response = Http::asForm()->withBasicAuth(env('XERO_CLIENT_ID'), env('XERO_CLIENT_SECRET'))
+        $response = Http::asForm()->withBasicAuth(
+            env('XERO_PROD_CLIENT_ID'),
+            env('XERO_PROD_CLIENT_SECRET'))
             ->post('https://identity.xero.com/connect/token', [
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $currentRefreshToken
@@ -144,7 +153,7 @@ class XeroContactController extends Controller
         }
 
         // Jika refresh gagal (misal refresh token expired juga), hapus file agar user login ulang
-        Storage::delete($this->tokenFile);
+        Storage::delete($this->tokenFile_prod);
         return null;
     }
 
@@ -157,7 +166,7 @@ class XeroContactController extends Controller
         // expires_in biasanya 1800 detik (30 menit)
         $tokens['expires_at'] = Carbon::now()->timestamp + $tokens['expires_in'];
 
-        Storage::put($this->tokenFile, json_encode($tokens, JSON_PRETTY_PRINT));
+        Storage::put($this->tokenFile_prod, json_encode($tokens, JSON_PRETTY_PRINT));
     }
 
     /**
