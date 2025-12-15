@@ -45,14 +45,14 @@ Route::get('/xero/contacts', [XeroContactController::class, 'getContacts']);
 
 
 
-Route::post('/save-data-product', [ProductAndServiceController::class, 'updateProduct']);
+Route::post('/save-data-product', [ProductAndServiceController::class, 'updateProduct']);//used
 //Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get-data', [ContactController::class, 'getContact']);
 //});
 //proudct
-Route::get('/get-data-product', [ProductAndServiceController::class, 'getProduct']);
-Route::get('/get-data-no-limit', [ProductAndServiceController::class, 'getProductAllNoBearer']);
-Route::get('/get-by-id/{id}', [ProductAndServiceController::class, 'getProductById']);
+Route::get('/get-data-product', [ProductAndServiceController::class, 'getProduct']);//used
+Route::get('/get-data-no-limit', [ProductAndServiceController::class, 'getProductAllNoBearer']);//used
+Route::get('/get-by-id/{id}', [ProductAndServiceController::class, 'getProductById']);//used
 
 //payment
 Route::post('/updateDeletedPayment/{payment_id}/{status}', [PaymentController::class, 'updatePaymentStatus']);
@@ -60,22 +60,23 @@ Route::get('/getDetailPayment/{idPayment}', [InvoicesController::class, 'getDeta
 Route::post('/createPayments', [PaymentController::class, 'createPayments']);
 
 //invoice
-Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaket']);
-Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDetailInvoice']);
+Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaket']);//used
+Route::get('/getInvoiceByIdPaketPaging/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaketPaging']);
+Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDetailInvoice']);//used
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
 Route::post('/submitUpdateinvoices', [InvoicesDuplicateController::class, 'updateInvoiceSelected']);//update semua select submit
 
 //save per rows
-Route::post('/invoice/item/save', [InvoiceItem2Controller::class, 'saveItem'])->name('invoice.item.save');
-Route::delete('/invoice/item/{id}', [InvoiceItem2Controller::class, 'deleteItem'])->name('invoice.item.delete');
+Route::post('/invoice/item/save', [InvoiceItem2Controller::class, 'saveItem'])->name('invoice.item.save');//used
+Route::delete('/invoice/item/{id}', [InvoiceItem2Controller::class, 'deleteItem'])->name('invoice.item.delete');//used
 //tax rate
-Route::get('/tax_rate', [TaxRateController::class, 'getTaxRate']);
+Route::get('/tax_rate', [TaxRateController::class, 'getTaxRate']);//
 
 //kategory (tracking)
-Route::get('/get_divisi', [TrackingController::class, 'getKategory']);
-Route::get('/get_agent', [TrackingController::class, 'getAgent']);
+Route::get('/get_divisi', [TrackingController::class, 'getKategory']);//used
+Route::get('/get_agent', [TrackingController::class, 'getAgent']);//used
 
 //getAcountDetailAcount Invoice
-Route::get('/getAllAccount', [PaymentController::class, 'getGroupedAccounts']);
+Route::get('/getAllAccount', [PaymentController::class, 'getGroupedAccounts']);//used
 
 Route::post('/updatePerbaris/{parent_id}/{amount_input}/{line_item_id}', [InvoicesController::class, 'updateInvoicePerRows']);//untuk testing

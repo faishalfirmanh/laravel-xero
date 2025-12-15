@@ -30,7 +30,17 @@ class ProductAndServiceController extends Controller
     public function getProductAllNoBearer(XeroAuthService $xeroService)
     {
         try {
-            $token = $xeroService->getToken();
+             $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+               return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+              $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $tokenData['access_token'],
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->get('https://api.xero.com/api.xro/2.0/Items');
+            return  $response->json();
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -39,12 +49,12 @@ class ProductAndServiceController extends Controller
                 'file' => $e->getFile()
             ], 500);
         }
-        $tenantId = $this->getTenantId($token);
-        $response = Http::withToken($token)
-            ->withHeaders(['xero-tenant-id' => $tenantId])
-            ->get('https://api.xero.com/api.xro/2.0/Items');
+        // $tenantId = $this->getTenantId($token);
+        // $response = Http::withToken($token)
+        //     ->withHeaders(['xero-tenant-id' => $tenantId])
+        //     ->get('https://api.xero.com/api.xro/2.0/Items');
 
-        return $response->json();
+        // return $response->json();
     }
 
     public function getProduct(Request $request)
@@ -152,9 +162,15 @@ class ProductAndServiceController extends Controller
 
         try {
             // Panggilan dilakukan dari SISI SERVER, BUKAN BROWSER
+
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Authorization' => 'Bearer ' .$tokenData['access_token'],// env('BARER_TOKEN'),
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->post('https://api.xero.com/api.xro/2.0/Items', $payload);
@@ -173,9 +189,14 @@ class ProductAndServiceController extends Controller
 
         try {
             // Panggilan dilakukan dari SISI SERVER, BUKAN BROWSER
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Authorization' => 'Bearer ' . $tokenData['access_token'],// env('BARER_TOKEN'),
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->post('https://api.xero.com/api.xro/2.0/Items', $payload);

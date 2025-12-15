@@ -6,9 +6,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\PaymentParams;
 use Illuminate\Support\Facades\Log;
-
+use App\ConfigRefreshXero;
 class InvoicesDuplicateController extends Controller
 {
+
+     use ConfigRefreshXero;
+
     function xeroDateToPhp($xeroDate, $format = 'Y-m-d') {
         if (empty($xeroDate)) return null;
         preg_match('/\/Date\((-?\d+)/', $xeroDate, $matches);
@@ -68,9 +71,14 @@ class InvoicesDuplicateController extends Controller
     public function getDetailPayment($idPayment) {
         // ... (Kode sama seperti sebelumnya) ...
         // Agar tidak kepanjangan, bagian ini aman jika data tersimpan di DB
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
+
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
             'Accept' => 'application/json',
         ])->get("https://api.xero.com/api.xro/2.0/Payments/$idPayment");
 
@@ -100,9 +108,14 @@ class InvoicesDuplicateController extends Controller
 
     public function updateInvoicePaidPerRows($payment_id) {
         // ... (Kode sama) ...
+
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ])->post("https://api.xero.com/api.xro/2.0/Payments/$payment_id", ["Status" => "DELETED"]);
@@ -122,10 +135,16 @@ class InvoicesDuplicateController extends Controller
         $isReady = false;
         $data = null;
 
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
+
+
         while ($attempt < $maxRetries && !$isReady) {
             $res = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Authorization' => 'Bearer ' . $tokenData["access_token"],
+                'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
                 'Accept' => 'application/json',
             ])->get("https://api.xero.com/api.xro/2.0/Invoices/$cleanId");
 
@@ -190,8 +209,8 @@ class InvoicesDuplicateController extends Controller
 
         // 3. Kirim Update
         $resUpdate = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ])->post('https://api.xero.com/api.xro/2.0/Invoices', [
@@ -213,9 +232,14 @@ class InvoicesDuplicateController extends Controller
         $backup = PaymentParams::where('payments_id', $old_payment_id)->first();
         if (!$backup) return;
 
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
+
         $resInv = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
             'Accept' => 'application/json',
         ])->get("https://api.xero.com/api.xro/2.0/Invoices/$invoice_id");
 
@@ -244,8 +268,8 @@ class InvoicesDuplicateController extends Controller
         if ($payAmount <= 0) return;
 
         $resPay = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-            'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ])->post('https://api.xero.com/api.xro/2.0/Payments', [

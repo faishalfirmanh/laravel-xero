@@ -160,10 +160,11 @@
 
     function getAllitems(){
          $.ajax({
-            url: `${BASE_URL}/api/get-data-product`,
+            url: `${BASE_URL}/api/get-data-no-limit`,
             type: 'GET',
             dataType: 'json',
             success: function (response) {
+               // console.log("get all data",response)
                 if(response.Items) availableProducts = response.Items;
             }
         });

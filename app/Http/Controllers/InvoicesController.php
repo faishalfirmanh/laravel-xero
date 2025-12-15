@@ -1,12 +1,14 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\ConfigRefreshXero;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\PaymentParams;
 class InvoicesController extends Controller
 {
+
+    use ConfigRefreshXero;
     public function viewProduct()
     {
         return view('product');
@@ -95,9 +97,15 @@ class InvoicesController extends Controller
     public function getDetailInvoice($idInvoice)
     {
         try {
+
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+
             $response_detail = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Authorization' => 'Bearer ' . $tokenData["access_token"],
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->get("https://api.xero.com/api.xro/2.0/Invoices/$idInvoice");
@@ -266,18 +274,124 @@ class InvoicesController extends Controller
         return response()->json($update_tiap_row_invoices->json() ?: ['message' => 'Xero API Error'], $update_tiap_row_invoices->status());
     }
 
-    public function getInvoiceByIdPaket($itemCode = 0)
+    public function getInvoiceByIdPaketPaging(Request $request, $itemCode = 0)
     {
-        //  dd($itemCode);
         try {
+            // 1. Ambil Parameter Request
+            $page = (int) $request->input('page', 1);
+            $limit = (int) $request->input('limit', 10);
+            $search = strtolower($request->input('search', '')); // Search Nama Jamaah
+
+            // 2. Validasi Token
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                return response()->json(['message' => 'Token kosong/invalid.'], 401);
+            }
+
+            // 3. Ambil Semua Invoice dari Xero
+            // CATATAN: Ini berat jika invoice ribuan. Idealnya pakai parameter filter Xero (?where=...)
+            // tapi struktur Xero API Invoice tidak bisa filter nested ItemCode langsung.
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Authorization' => 'Bearer ' . $tokenData['access_token'],
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->get('https://api.xero.com/api.xro/2.0/Invoices');
 
+            if ($response->failed()) {
+                return response()->json(['message' => 'Gagal ambil data Xero'], 500);
+            }
 
+            $allInvoices = $response['Invoices'];
+            $filteredList = [];
+
+            // 4. Looping & Filtering Data (Cari ItemCode & Search Nama)
+            foreach ($allInvoices as $value) {
+                $cleanId = trim($value['InvoiceID'], '"');
+
+                // OPTIMASI: Cek dulu apakah nama jamaah cocok (jika ada search), sebelum detail request
+                $namaJamaah = isset($value['Contact']['Name']) ? strtolower($value['Contact']['Name']) : '';
+
+                if ($search !== '' && strpos($namaJamaah, $search) === false) {
+                    continue; // Skip jika nama tidak cocok dengan search
+                }
+
+                // Request Detail Invoice
+                $resp2 = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $tokenData['access_token'],
+                    'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ])->get("https://api.xero.com/api.xro/2.0/Invoices/$cleanId");
+
+                if(isset($resp2['Invoices'][0]['LineItems'])){
+                    foreach ($resp2['Invoices'][0]['LineItems'] as $lineItem) {
+                        if (isset($lineItem['ItemCode']) && $lineItem['ItemCode'] == $itemCode) {
+
+                            $invDetail = $resp2['Invoices'][0];
+
+                            $filteredList[] = [
+                                'parent_invoice_id' => $cleanId,
+                                'nama_jamaah' => $invDetail['Contact']['Name'],
+                                'no_invoice' => $value['InvoiceNumber'],
+                                'line_item_id' => $lineItem['LineItemID'],
+                                'detail_amount_tiap_item' => $lineItem['LineAmount'],
+                                'qty_tiap_item' => $lineItem['Quantity'],
+                                'tanggal' => $invDetail['DateString'],
+                                'tanggal_due_date' => $invDetail['DueDateString'] ?? null,
+                                'paket_name' => $lineItem['Item']['Name'] ?? '',
+                                'amount_paid' => $invDetail['AmountPaid'],
+                                'total' => $invDetail['Total'],
+                                'status' => $value['Status'],
+                                'payment' => $value['Payments'] ?? []
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // 5. Pagination Manual (Array Slice)
+            $totalData = count($filteredList);
+            $totalPages = ceil($totalData / $limit);
+            $offset = ($page - 1) * $limit;
+
+            $paginatedData = array_slice($filteredList, $offset, $limit);
+
+            // 6. Return JSON dengan Meta Data Pagination
+            return response()->json([
+                'data' => $paginatedData,
+                'meta' => [
+                    'current_page' => $page,
+                    'limit' => $limit,
+                    'total_data' => $totalData,
+                    'total_pages' => $totalPages
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function getInvoiceByIdPaket($itemCode = 0)
+    {
+        //  dd($itemCode);
+        try {
+
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+
+            //dd($tokenData);
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $tokenData['access_token'],
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->get('https://api.xero.com/api.xro/2.0/Invoices');
+
+            //dd($response['Invoices']);
             $items_inv = 0;
             $list_invoice = [];
             foreach ($response['Invoices'] as $key => $value) {
@@ -285,8 +399,8 @@ class InvoicesController extends Controller
 
                 //detail Invoices
                 $resp2 = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                    'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                    'Authorization' => 'Bearer ' .$tokenData['access_token'],
+                    'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ])->get("https://api.xero.com/api.xro/2.0/Invoices/$cleanId");
@@ -322,7 +436,7 @@ class InvoicesController extends Controller
 
                 }
             }
-            // dd($items_inv);
+            // dd($list_invoice);
             return response()->json($list_invoice ?: ['message' => 'Xero API Error'], count($list_invoice) > 0 ? $response->status() : 404);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], $e->getCode());

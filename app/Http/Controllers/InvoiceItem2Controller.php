@@ -7,16 +7,24 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\PaymentParams; // Pastikan model ini ada
 use Carbon\Carbon;
+use App\ConfigRefreshXero;
 
 class InvoiceItem2Controller extends Controller
 {
     private $xeroBaseUrl = 'https://api.xero.com/api.xro/2.0';
 
+    use ConfigRefreshXero;
     // Helper Headers
-    private function getHeaders() {
+    private function getHeaders()
+    {
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
+        //dd($tokenData);
         return [
-            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-            'Xero-Tenant-Id' => env('XERO_TENANT_ID'), // Gunakan ENV agar dinamis
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ];
@@ -58,6 +66,7 @@ class InvoiceItem2Controller extends Controller
             $paymentBackups = [];
 
             // Jika ada pembayaran, lakukan Backup & Void (Delete) Payment
+            dd($payment);
             if (!empty($payments)) {
                 foreach ($payments as $pay) {
                     $payId = $pay['PaymentID'];
@@ -329,6 +338,7 @@ class InvoiceItem2Controller extends Controller
         $paymentBackups = [];
 
         // 2. Backup & Void Payment (Jika Status PAID/Partial)
+        //dd($payments);
         if (!empty($payments)) {
             Log::info("Menghapus item dari Paid Invoice: $invoiceId");
 
@@ -363,8 +373,13 @@ class InvoiceItem2Controller extends Controller
             'LineItems' => $newLineItems
         ];
 
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
+
         $updateResponse = Http::withHeaders([
-            'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
+            'Authorization' => 'Bearer ' .$tokenData["access_token"],
             'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',

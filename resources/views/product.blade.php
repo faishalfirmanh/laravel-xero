@@ -105,13 +105,13 @@
                 <i class="bi bi-search"></i> Cari
             </button>
 
-            <button class="btn btn-light btn-sm" id="refreshBtn">
+            {{-- <button class="btn btn-light btn-sm" id="refreshBtn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .917-.184A6 6 0 1 1 8 2z"/>
                     <path d="M8 4.464a.5.5 0 0 1 .5.5v3.427a.5.5 0 0 1-.5.5zM8 10a.5.5 0 0 1-.5-.5V6.073a.5.5 0 0 1 1 0v3.427a.5.5 0 0 1-.5.5z"/>
                 </svg>
                 Refresh
-            </button>
+            </button> --}}
         </div>
     </div>
     <div class="card-body">
@@ -143,49 +143,70 @@
 </div>
 
 
-        <div class="card shadow mb-5">
+    <div class="card shadow mb-5">
             <div class="card-body">
                 <div id="ListInvoiceContainer">
-                  <div class="loader" id="listInvoiceLoader"></div>
+                    <div class="loader d-none" id="listInvoiceLoader"></div>
                 </div>
             </div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="card-title mb-0">List Invoice</h5>
-                <button class="btn btn-success" id="btnSaveInvoice">
+
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">List Invoice</h5>
+                <button class="btn btn-success btn-sm" id="btnSaveInvoice">
                     <i class="fas fa-save"></i> Save Data
                 </button>
             </div>
-                <table class="table table-striped table-bordered mt-3 d-none" id="invoiceTable">
+
+            <div class="p-3 bg-light border-bottom">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <input type="text" id="searchInvoiceInput" class="form-control form-control-sm" placeholder="Cari Nama Jamaah...">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary btn-sm w-100" id="btnSearchInvoice">
+                            <i class="bi bi-search"></i> Cari
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered mt-0 d-none" id="invoiceTable">
                     <thead class="table-dark">
                         <tr>
                             <th>#</th>
-                            <th style="color: black">No Invoice</th>
-                            <th style="color: black">Name Jamaah</th>
-                            <th style="color: black">Name Paket</th>
-                            <th style="color: black">Date</th>
-                            <th style="color: black">Due Date</th>
-                            <th style="color: black">Nominal Paid</th>
-                            <th style="color: black">Total</th>
-                            <th style="color: black">Status</th>
-                            <th style="color: black" class="text-center" width="10%">
+                            <th>No Invoice</th>
+                            <th>Name Jamaah</th>
+                            <th>Name Paket</th>
+                            <th>Date</th>
+                            <th>Due Date</th>
+                            <th>Nominal Paid</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th class="text-center" width="10%">
                                 <div class="form-check d-flex flex-column align-items-center justify-content-center">
                                     <input class="form-check-input" type="checkbox" id="checkAll">
                                     <label class="form-check-label small mt-1" for="checkAll" style="cursor: pointer;">
-                                        Pilih Semua
+                                        All
                                     </label>
                                 </div>
                             </th>
                         </tr>
                     </thead>
                     <tbody id="invoiceTableBody">
-
                     </tbody>
                 </table>
             </div>
+
+            <div class="card-footer d-flex justify-content-between align-items-center" id="invoicePagination">
+                <button class="btn btn-secondary btn-sm" id="prevInvPage" disabled>Previous</button>
+                <span class="small">Page <span id="currentInvPage">1</span> of <span id="totalInvPage">1</span> (Total: <span id="totalInvData">0</span>)</span>
+                <button class="btn btn-secondary btn-sm" id="nextInvPage" disabled>Next</button>
+            </div>
+
             <div class="card-body">
                 <div id="notif_save_checbox">
-                  <div class="loader d-none" id="invoice_update_checkbox"></div>
-
+                    <div class="loader d-none" id="invoice_update_checkbox"></div>
                 </div>
             </div>
         </div>

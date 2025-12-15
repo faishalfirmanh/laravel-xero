@@ -2,47 +2,61 @@
 
 namespace App\Http\Controllers;
 
+use App\ConfigRefreshXero;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 class PaymentController extends Controller
 {
-   
+
+     use ConfigRefreshXero;
 
      public function getGroupedAccounts()
     {
         $accessToken = env('BARER_TOKEN');
         $tenantId = env('XERO_TENANT_ID');
 
-        // Filter: Status harus ACTIVE
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $accessToken,
-            'Xero-Tenant-Id' => $tenantId,
-            'Accept' => 'application/json'
-        ])->get('https://api.xero.com/api.xro/2.0/Accounts', [
-            'where' => 'Status=="ACTIVE"'
-        ]);
+        try {
 
-        if ($response->failed()) {
-            return response()->json(['error' => 'Gagal fetch Accounts'], 500);
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $tokenData["access_token"],
+                'Xero-Tenant-Id' => $tenantId,
+                'Accept' => 'application/json'
+                ])->get('https://api.xero.com/api.xro/2.0/Accounts', [
+                    'where' => 'Status=="ACTIVE"'
+            ]);
+
+            if ($response->failed()) {
+                return response()->json(['error' => 'Gagal fetch Accounts'], 500);
+            }
+
+            $accounts = $response->json()['Accounts'];
+
+            $grouped = [];
+
+
+            ksort($accounts);
+
+            return response()->json([
+                'Status' => 'OK',
+                'GroupedAccounts' => $accounts
+            ]);
+
+        } catch (\Throwable $e) {
+             return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], 500);
         }
 
-        $accounts = $response->json()['Accounts'];
-
-        $grouped = [];
-        
-     
-        ksort($accounts);
-
-        return response()->json([
-            'Status' => 'OK',
-            'GroupedAccounts' => $accounts
-        ]);
+        // Filter: Status harus ACTIVE
     }
-  
+
    public function updatePaymentStatus($payment_id, $status = "DELETED")
     {
         $payload = [
-            "Status" => $status, 
+            "Status" => $status,
         ];
 
         $inv = [];
@@ -77,6 +91,6 @@ class PaymentController extends Controller
           return response()->json($response_detail->json(), $response_detail->status());
     }
 
-   
+
 
 }

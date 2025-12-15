@@ -1,10 +1,16 @@
 const LIST_URL = 'api/get-data-product';
 const CREATE_URL = 'api/save-data-product';
 const URL_INVOICE = 'api/getInvoiceByIdPaket/'
+const URL_INVOICE_PAGING = 'api/getInvoiceByIdPaketPaging/'
 const URL_DETAIL_Item = 'api/get-by-id/'
 const baseUrlOrigin = window.location.origin;
 let currentPage = 1;
 let currentSearch = '';
+
+
+let currentInvPage = 1;
+let currentInvSearch = '';
+let currentIdPaket = 0;
 
 function getDataEdit(id) {
     $.ajax({
@@ -76,6 +82,29 @@ function formatRupiah(angka) {
 }
 $(document).ready(function () {
 
+    //invoice by id paket
+    $('#btnSearchInvoice').click(function() {
+        currentInvSearch = $('#searchInvoiceInput').val(); // Ambil value dari input
+        currentInvPage = 1; // Reset ke halaman 1 setiap search baru
+        fetchDataInvoice(); // Panggil ulang dengan ID Paket yang sedang aktif
+    });
+    $('#nextInvPage').click(function() {
+        currentInvPage++;
+        fetchDataInvoice();
+    });
+    $('#prevInvPage').click(function() {
+        if (currentInvPage > 1) {
+            currentInvPage--;
+            fetchDataInvoice();
+        }
+    });
+    $('#searchInvoiceInput').keypress(function(e) {
+        if(e.which == 13) { // 13 adalah kode tombol Enter
+            $('#btnSearchInvoice').click();
+        }
+    });
+    //invoice by id paket
+
     $('#searchBtn').click(function () {
         currentSearch = $('#searchInput').val();
         currentPage = 1; // Reset ke halaman 1 saat search baru
@@ -123,7 +152,7 @@ $(document).ready(function () {
         $('#listLoader').removeClass('d-none');
         $('#contactTable').addClass('d-none');
         $('#contactTableBody').empty();
-
+        $("#listInvoiceLoader").removeClass('d-none');
         // Disable buttons saat loading
         $('#prevPageBtn, #nextPageBtn').prop('disabled', true);
 
@@ -205,7 +234,7 @@ $(document).ready(function () {
                 $('#contactTable').removeClass('d-none');
                 console.error("Error fetching contacts:", error);
                 $('#contactTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal mengambil data dari server.</td></tr>');
-                //$('#listInvoiceLoader').addClass('d-none');
+                $('#listInvoiceLoader').addClass('d-none');
             }
         });
     }
@@ -307,94 +336,97 @@ $(document).ready(function () {
 
     })
 
-    function fetchDataInvoice(idPaket) {
+   function fetchDataInvoice(idPaket) {
+        // Simpan ID Paket ke variable global agar bisa dipakai saat klik Next/Prev
+        if (idPaket) currentIdPaket = idPaket;
 
+        $('#listInvoiceLoader').removeClass('d-none');
         $('#invoiceTable').addClass('d-none');
-        const routeTemplate = "{{ route('detailInvoiceWeb', ':id') }}";
-        // Bersihkan isi tbody sebelum request
         $('#invoiceTableBody').empty();
 
+        // Disable pagination buttons while loading
+        $('#prevInvPage, #nextInvPage').prop('disabled', true);
+
         $.ajax({
-            url: `${URL_INVOICE}${idPaket}`, // Pastikan URL ini valid
+            url: `${URL_INVOICE_PAGING}${currentIdPaket}`,
             type: 'GET',
             dataType: 'json',
+            data: {
+                page: currentInvPage,
+                limit: 10,
+                search: currentInvSearch
+            },
             success: function (response) {
+                console.log("Ee",response)
+                $('#listInvoiceLoader').addClass('d-none');
+                $('#invoiceTable').removeClass('d-none');
 
-                if (!response || response.length < 1) {
-                    // colspan="9" disesuaikan dengan jumlah kolom header tabel Anda
-                    $('#invoiceTableBody').html(`
-                        <tr>
-                            <td colspan="9" class="text-center">Data tidak ditemukan</td>
-                        </tr>
-                    `);
-                    return; // Hentikan proses, jangan lanjut ke looping
+                // Cek data kosong
+                if (!response.data || response.data.length === 0) {
+                    $('#invoiceTableBody').html('<tr><td colspan="10" class="text-center">Data tidak ditemukan</td></tr>');
+                    $('#totalInvData').text(0);
+                    $('#totalInvPage').text(1);
+                    return;
                 }
 
+                // Update Info Pagination
+                const meta = response.meta;
+                $('#currentInvPage').text(meta.current_page);
+                $('#totalInvPage').text(meta.total_pages);
+                $('#totalInvData').text(meta.total_data);
+
+                // Logic Tombol Next/Prev
+                $('#prevInvPage').prop('disabled', meta.current_page <= 1);
+                $('#nextInvPage').prop('disabled', meta.current_page >= meta.total_pages);
+
                 let rows = '';
-                let counter = 1;
+                // Hitung nomor urut: (page-1) * limit + 1
+                let counter = ((meta.current_page - 1) * meta.limit) + 1;
+                let price_afer_save = $("#unit_price_save").val();
 
-                response.forEach((item, key) => {
-
-                    // 1. Format Tanggal (Indo)
+                response.data.forEach((item, key) => {
                     let date = formatDateIndo(item.tanggal);
                     let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
-
-                    // 2. Format Rupiah
                     let nominalPaid = formatRupiah(item.amount_paid);
-
-                    // 3. Warna Status (Bootstrap Badge)
                     let statusBadge = getStatusBadge(item.status);
-                    let price_afer_save = $("#unit_price_save").val();
                     let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
-                    let url = $(this).data('url');
+                    let cek_item_payment = (item.payment && item.payment.length > 0) ? item.payment[0].PaymentID : 'kosong';
 
-                    let cek_item_payment = item.payment.length > 0 ? item.payment[0].PaymentID : 'kosong';
-
-                    // 4. Susun HTML Row
                     rows += `
-                                        <tr>
-                                            <td>${counter++}</td>
-                                            <td>${item.no_invoice}</td>
-                                            <td>${item.nama_jamaah}</td>
-                                            <td>${item.paket_name || '-'}</td>
-                                            <td>${date}</td>
-                                            <td>${dueDate}</td>
-                                            <td class="text-end">${nominalPaid}</td>
-                                            <td>${item.total}</td>
-                                            <td class="text-center">${statusBadge}</td>
-                                            <td class="text-center">
-                                                <a href="${finalUrl}" target="_blank" class="btn btn-primary btn-sm">
-                                                    Detail
-                                                </a>
-                                                <div class="form-check d-flex justify-content-center">
-                                                    <input class="form-check-input invoice-checkbox"
-                                                        type="checkbox"
-                                                        value="${key}"
-                                                        id="cb_${key}"
-                                                        data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}_${cek_item_payment}"
-                                                        data-amount="${price_afer_save}">
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    `;
+                        <tr>
+                            <td>${counter++}</td>
+                            <td>${item.no_invoice}</td>
+                            <td>${item.nama_jamaah}</td>
+                            <td>${item.paket_name || '-'}</td>
+                            <td>${date}</td>
+                            <td>${dueDate}</td>
+                            <td class="text-end">${nominalPaid}</td>
+                            <td>${formatRupiah(item.total)}</td>
+                            <td class="text-center">${statusBadge}</td>
+                            <td class="text-center">
+                                <a href="${finalUrl}" target="_blank" class="btn btn-primary btn-sm mb-1">Detail</a>
+                                <div class="form-check d-flex justify-content-center">
+                                    <input class="form-check-input invoice-checkbox"
+                                        type="checkbox"
+                                        value="${key}"
+                                        data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}_${cek_item_payment}"
+                                        data-amount="${price_afer_save}">
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
 
-                // Masukkan rows ke tbody
                 $('#invoiceTableBody').html(rows);
-                // Munculkan tabel
-                $('#listInvoiceLoader').addClass('d-none');
-                $('#invoiceTable').removeClass('d-none');
             },
-            error: function (xhr, status, error) {
+            error: function (xhr) {
                 $('#listInvoiceLoader').addClass('d-none');
                 $('#invoiceTable').removeClass('d-none');
-                console.error("Error fetching data: get invoice by id paket", error, status, xhr);
-
-                // Perbaikan: Target ke tbody, jangan ke table ID agar header tidak hilang
-                $('#invoiceTableBody').html('<tr><td colspan="8" class="text-center text-danger">Gagal mengambil data invoice dari server.</td></tr>');
+                console.error("Error fetching invoice:", xhr);
+                $('#invoiceTableBody').html('<tr><td colspan="10" class="text-center text-danger">Gagal mengambil data.</td></tr>');
             }
         });
-    }
+   }
 
 
     // Panggil fungsi saat halaman pertama kali dimuat
@@ -483,7 +515,7 @@ $(document).ready(function () {
             error: function (xhr) {
                 console.log('error', xhr)
                 // Tampilkan pesan error
-                let errorMessage = 'Gagal menyimpan kontak. Silakan coba lagi.';
+                let errorMessage = 'Gagal menyimpan product. Silakan coba lagi.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
                 }
