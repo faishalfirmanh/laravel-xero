@@ -23,7 +23,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 //local contact
-Route::get('/get-contact-local', [ContactController::class, 'getContactLocal']);
+Route::get('/get-contact-local', [ContactController::class, 'getContactLocal']);//used
 
 Route::get('getCodeBeforeToken', [ConfigController::class, 'getAuthUrl']);
 Route::post('getToken', [ConfigController::class, 'getToken']);
