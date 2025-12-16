@@ -122,12 +122,12 @@
         <table class="table table-striped table-bordered mt-3 d-none" id="contactTable">
             <thead class="table-dark">
                 <tr>
-                    <th>#</th>
-                    <th>Nama Paket</th>
-                    <th>Code</th>
-                    <th>Harga</th>
-                    <th>Penjelasan</th>
-                    <th>Action</th>
+                    <th style="color: black">#</th>
+                    <th style="color: black">Nama Paket</th>
+                    <th style="color: black">Code</th>
+                    <th style="color: black">Harga</th>
+                    <th style="color: black">Penjelasan</th>
+                    <th style="color: black">Action</th>
                 </tr>
             </thead>
             <tbody id="contactTableBody">
@@ -144,14 +144,8 @@
 
 
     <div class="card shadow mb-5">
-            <div class="card-body">
-                <div id="ListInvoiceContainer">
-                    <div class="loader d-none" id="listInvoiceLoader"></div>
-                </div>
-            </div>
-
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">List Invoice</h5>
+                <h5 class="mb-0">List Invoice <span style="color: white" id="name_paket_saved"></span> </h5>
                 <button class="btn btn-success btn-sm" id="btnSaveInvoice">
                     <i class="fas fa-save"></i> Save Data
                 </button>
@@ -170,20 +164,26 @@
                 </div>
             </div>
 
+            <div class="card-body">
+                <div id="ListInvoiceContainer">
+                    <div class="loader d-none" id="listInvoiceLoader"></div>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-striped table-bordered mt-0 d-none" id="invoiceTable">
                     <thead class="table-dark">
                         <tr>
-                            <th>#</th>
-                            <th>No Invoice</th>
-                            <th>Name Jamaah</th>
-                            <th>Name Paket</th>
-                            <th>Date</th>
-                            <th>Due Date</th>
-                            <th>Nominal Paid</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th class="text-center" width="10%">
+                            <th style="color:black">#</th>
+                            <th style="color:black">No Invoice</th>
+                            <th style="color:black">Name Jamaah</th>
+                            <th style="color:black">Name Paket</th>
+                            <th style="color:black">Date</th>
+                            <th style="color:black">Due Date</th>
+                            <th style="color:black">Nominal Paid</th>
+                            <th style="color:black">Total</th>
+                            <th style="color:black">Status</th>
+                            <th style="color:black" class="text-center" width="10%">
                                 <div class="form-check d-flex flex-column align-items-center justify-content-center">
                                     <input class="form-check-input" type="checkbox" id="checkAll">
                                     <label class="form-check-label small mt-1" for="checkAll" style="cursor: pointer;">

@@ -148,12 +148,18 @@ class InvoicesController extends Controller
     public function getDetailPayment($idPayment)
     {
          try {
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
             $response_detail = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('BARER_TOKEN'),
-                'Xero-Tenant-Id' => '90a3a97b-3d70-41d3-aa77-586bb1524beb',
+                'Authorization' => 'Bearer ' . $tokenData["access_token"],
+                'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->get("https://api.xero.com/api.xro/2.0/Payments/$idPayment");
+
+          // return response()->json($response_detail->json() ?: ['message' => 'Xero API Error'], $response_detail->status());
            // dd($response_detail['Payments'][0]["Amount"]);
             $amount = $response_detail['Payments'][0]["Amount"];
             $account_code = $response_detail['Payments'][0]["Account"]["AccountID"];

@@ -66,7 +66,7 @@ class InvoiceItem2Controller extends Controller
             $paymentBackups = [];
 
             // Jika ada pembayaran, lakukan Backup & Void (Delete) Payment
-            dd($payment);
+           // dd($payment);
             if (!empty($payments)) {
                 foreach ($payments as $pay) {
                     $payId = $pay['PaymentID'];

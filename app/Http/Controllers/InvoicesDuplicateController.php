@@ -19,6 +19,21 @@ class InvoicesDuplicateController extends Controller
         return date($format, $matches[1] / 1000);
     }
 
+
+    function convertJsonDate($jsonDate) {
+        if (preg_match('/\d+/', $jsonDate, $matches)) {
+            // Ambil timestamp (milidetik)
+            $milliSeconds = $matches[0];
+
+            // Konversi ke detik
+            $seconds = $milliSeconds / 1000;
+
+            // Kembalikan format tanggal
+            return date("Y-m-d", $seconds);
+        }
+        return null; // Jika format salah
+    }
+
     public function updateInvoiceSelected(Request $request)
     {
         $rawContent = $request->getContent();
@@ -26,6 +41,7 @@ class InvoicesDuplicateController extends Controller
         $array = [];
         $errors = [];
 
+        //  dd($data['items']);
         foreach ($data['items'] as $value) {
             try {
                 Log::info("=== MULAI PROSES INVOICE: " . $value['no_invoice'] . " ===");
@@ -34,8 +50,8 @@ class InvoicesDuplicateController extends Controller
 
                 if ($hasPayment) {
                     Log::info("Status: Ada Payment (" . $value['no_payment'] . "). Melakukan Backup & Void.");
-                    self::getDetailPayment($value['no_payment']);
-                    self::updateInvoicePaidPerRows($value['no_payment']);
+                    self::getDetailPayment($value['parentId']);
+                    // self::updateInvoicePaidPerRows($value['no_payment']);
                     sleep(2);
                 }
 
@@ -46,8 +62,9 @@ class InvoicesDuplicateController extends Controller
                 if ($hasPayment) {
                     usleep(500000);
                     Log::info("Status: Restore Payment...");
-                    self::createPayments($value['parentId'], $value['no_payment']);
-                    self::deletedRowInvoiceId($value['no_payment']);
+                    //self::createPayments($value['parentId'], $value['no_payment']);
+                    self::createPaymentsWithHistory($value['parentId']);
+                    self::deletedRowInvoiceId($value['parentId']);
                 }
 
                 $array[] = ['no_invoice' => $value['no_invoice'], 'status' => 'Success'];
@@ -63,40 +80,220 @@ class InvoicesDuplicateController extends Controller
         return response()->json($array, 200);
     }
 
-    public function deletedRowInvoiceId($paymentsId) {
-        $find = PaymentParams::where('payments_id', $paymentsId)->first();
-        if($find) $find->delete();
-    }
+    public function createPaymentsWithHistory($invoice_idUnique)
+    {
+        $backup = PaymentParams::where('invoice_id', $invoice_idUnique)->get();
 
-    public function getDetailPayment($idPayment) {
-        // ... (Kode sama seperti sebelumnya) ...
-        // Agar tidak kepanjangan, bagian ini aman jika data tersimpan di DB
+        // Cek isEmpty agar aman
+        if ($backup->isEmpty()) return;
+
         $tokenData = $this->getValidToken();
         if (!$tokenData) {
             return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
         }
 
-        $response = Http::withHeaders([
+        // Siapkan Header agar tidak berulang
+        $headers = [
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ];
+
+        // -----------------------------------------------------------
+        // 1. GET INVOICE DATA (Ambil Sisa Hutang & Contact ID)
+        // -----------------------------------------------------------
+        try {
+            $invResponse = Http::withHeaders($headers)
+                ->get('https://api.xero.com/api.xro/2.0/Invoices/' . $invoice_idUnique);
+
+            if ($invResponse->failed()) {
+                throw new \Exception("Gagal mengambil detail Invoice: " . $invResponse->body());
+            }
+
+            $xeroInvoice = $invResponse->json()['Invoices'][0];
+            $currentAmountDue = (float) $xeroInvoice['AmountDue'];
+
+            // PENTING: Kita butuh Contact ID untuk membuat Overpayment
+            $contactID = $xeroInvoice['Contact']['ContactID'];
+
+            Log::info("Sisa hutang invoice $invoice_idUnique: " . $currentAmountDue);
+
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            throw $e;
+        }
+
+        // -----------------------------------------------------------
+        // 2. LOOP DATA PEMBAYARAN
+        // -----------------------------------------------------------
+        foreach ($backup as $key => $value) {
+
+            $totalBayar = (float) $value->amount;
+            $payDate = $value->date;
+            $accId = $value->account_code;
+            $ref = $value->reference;
+
+            $bayarKeInvoice = 0;
+            $bayarKeOverpayment = 0;
+
+            // --- LOGIKA SPLIT PEMBAYARAN ---
+            if ($currentAmountDue > 0) {
+                if ($totalBayar <= $currentAmountDue) {
+                    // Kasus A: Bayar pas atau kurang (Normal)
+                    $bayarKeInvoice = $totalBayar;
+                    $currentAmountDue -= $totalBayar; // Kurangi sisa hutang lokal
+                } else {
+                    // Kasus B: Bayar Lunas + Sisa Lebih (Overpayment)
+                    $bayarKeInvoice = $currentAmountDue; // Bayar sisa hutang saja
+                    $bayarKeOverpayment = $totalBayar - $currentAmountDue; // Sisanya simpan
+                    $currentAmountDue = 0; // Hutang lunas
+                }
+            } else {
+                // Kasus C: Hutang sudah 0, tapi user kirim uang lagi (Full Overpayment)
+                $bayarKeOverpayment = $totalBayar;
+            }
+
+            // -------------------------------------------------------
+            // EKSEKUSI A: POST PAYMENT (KE INVOICE)
+            // -------------------------------------------------------
+            if ($bayarKeInvoice > 0) {
+                $resPay = Http::withHeaders($headers)
+                    ->post('https://api.xero.com/api.xro/2.0/Payments', [
+                        "Payments" => [[
+                            "Invoice" => ["InvoiceID" => $invoice_idUnique],
+                            "Account" => ["AccountID" => $accId],
+                            "Date" => $payDate,
+                            "Amount" => $bayarKeInvoice,
+                            "Reference" => $ref
+                        ]]
+                    ]);
+
+                if ($resPay->failed()) {
+                    Log::error("Gagal Payment Invoice: " . $resPay->body());
+                    throw new \Exception("Gagal Restore Payment: " . $resPay->body());
+                } else {
+                    Log::info("Sukses bayar Invoice: $bayarKeInvoice");
+                }
+            }
+
+            // -------------------------------------------------------
+            // EKSEKUSI B: PUT BANK TRANSACTION (OVERPAYMENT)
+            // -------------------------------------------------------
+            if ($bayarKeOverpayment > 0) {
+                Log::warning("Membuat Overpayment sebesar: $bayarKeOverpayment");
+
+                $resOver = Http::withHeaders($headers)
+                    ->put('https://api.xero.com/api.xro/2.0/BankTransactions', [
+                        "BankTransactions" => [[
+                            "Type" => "RECEIVE-OVERPAYMENT", // Tipe khusus Overpayment
+                            "Contact" => ["ContactID" => $contactID], // Wajib ada Contact
+                            "BankAccount" => ["AccountID" => $accId], // Masuk ke Bank mana
+                            "Date" => $payDate,
+                            "Reference" => $ref . " (Overpayment)",
+                            "LineItems" => [[
+                                "Description" => "Overpayment / Kelebihan bayar",
+                                "UnitAmount" => $bayarKeOverpayment,
+                                "AccountCode" => "800", // Ganti kode akun ini jika perlu (misal akun suspens/liability)
+                                // Atau hapus baris "AccountCode" agar Xero menggunakan default Accounts Receivable
+                            ]]
+                        ]]
+                    ]);
+
+                if ($resOver->failed()) {
+                    Log::error("Gagal Overpayment: " . $resOver->body());
+                    // Opsional: throw exception atau biarkan lanjut
+                } else {
+                    Log::info("Sukses catat Overpayment.");
+                }
+            }
+        }
+    }
+
+    public function deletedRowInvoiceId($invId) {
+        $find = PaymentParams::where('invoice_id', $invId)->delete();
+        if($find){
+            PaymentParams::where('invoice_id', $invId)->delete();
+        }
+    }
+
+    public function ApiGetAccountCodePayments($paymentsId)
+    {
+
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
+        $clean = trim($paymentsId, '"');
+         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $tokenData["access_token"],
             'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
             'Accept' => 'application/json',
-        ])->get("https://api.xero.com/api.xro/2.0/Payments/$idPayment");
+        ])->get("https://api.xero.com/api.xro/2.0/Payments/$clean");
 
         if ($response->failed()) throw new \Exception("Gagal Get Payment: " . $response->body());
+        if (empty($response->json()['Payments'])) return;
+        if ($response->json()["Payments"][0]["Status"] == 'DELETED') return;
 
-        $data = $response->json();
-        if (empty($data['Payments'])) return;
-        $payment = $data['Payments'][0];
-        if ($payment['Status'] == 'DELETED') return;
+        $account_id_payments = $response->json()["Payments"][0]["Account"]["AccountID"];
+        return $response->json()["Payments"][0]["Account"]["AccountID"];
+    }
 
-        self::insertToDb(
-            $payment["Amount"],
-            $payment['Account']['Code'] ?? $payment['Account']['AccountID'],
-            self::xeroDateToPhp($payment["Date"]),
-            $payment["Invoice"]["InvoiceID"],
-            $payment["Reference"] ?? "Re-payment api",
-            $idPayment
-        );
+    public function getDetailPayment($codeInvoice) {
+        // ... (Kode sama seperti sebelumnya) ...
+        // Agar tidak kepanjangan, bagian ini aman jika data tersimpan di DB
+        // dd($idInvoice);
+        $tokenData = $this->getValidToken();
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+        }
+
+        $response_detail_invoice = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $tokenData["access_token"],
+            'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->get("https://api.xero.com/api.xro/2.0/Invoices/$codeInvoice");
+
+        $history_payments = $response_detail_invoice->json()["Invoices"][0]["Payments"];
+        foreach ($history_payments as $key_inv => $value_inv) {
+           $final_date = $this->xeroDateToPhp($value_inv["Date"]);
+           $account_code_api = self::ApiGetAccountCodePayments($value_inv["PaymentID"]);
+
+            self::insertToDb(
+                $value_inv["Amount"],
+                $account_code_api,
+                self::xeroDateToPhp($value_inv["Date"]),
+                $codeInvoice,
+                "Re-payment api updated",
+                $value_inv["PaymentID"]
+            );
+            self::updateInvoicePaidPerRows($value_inv["PaymentID"]);
+        }
+
+        //return response()->json($response_detail_invoice, 200);
+
+        // $response = Http::withHeaders([
+        //     'Authorization' => 'Bearer ' . $tokenData["access_token"],
+        //     'Xero-Tenant-Id' => env("XERO_TENANT_ID"),
+        //     'Accept' => 'application/json',
+        // ])->get("https://api.xero.com/api.xro/2.0/Payments/$idPayment");
+
+        // if ($response->failed()) throw new \Exception("Gagal Get Payment: " . $response->body());
+
+        // $data = $response->json();
+        // if (empty($data['Payments'])) return;
+        // $payment = $data['Payments'][0];
+        // if ($payment['Status'] == 'DELETED') return;
+
+        // self::insertToDb(
+        //     $payment["Amount"],
+        //     $payment['Account']['Code'] ?? $payment['Account']['AccountID'],
+        //     self::xeroDateToPhp($payment["Date"]),
+        //     $payment["Invoice"]["InvoiceID"],
+        //     $payment["Reference"] ?? "Re-payment api",
+        //     $idPayment
+        // );
     }
 
     public function insertToDb($amount, $account_code, $date, $invoice_id, $reference_id, $idPayment) {
@@ -175,11 +372,11 @@ class InvoicesDuplicateController extends Controller
             foreach ($inv['LineItems'] as $item) {
 
                 // DEBUG: Log setiap item yang ada di invoice ini
-                Log::info("Cek Item Xero ID: " . $item['LineItemID'] . " | Amount Asli: " . $item['UnitAmount']);
+                Log::info("Cek Item Xero line items : " . $item['LineItemID'] . " | Amount Asli: " . $item['UnitAmount']);
 
                 // PERBANDINGAN ID
                 if (strcasecmp(trim($item['LineItemID']), trim($line_item_id)) == 0) {
-                    Log::info(">>> KETEMU! Update ID " . $item['LineItemID'] . " menjadi " . $amount_input);
+                    Log::info(">>> KETEMU! Update line itemID " . $item['LineItemID'] . " menjadi " . $amount_input);
                     $newAmount = $amount_input;
                     $found = true;
                 } else {

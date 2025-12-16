@@ -108,7 +108,7 @@ $(document).ready(function () {
     $('#searchBtn').click(function () {
         currentSearch = $('#searchInput').val();
         currentPage = 1; // Reset ke halaman 1 saat search baru
-        fetchContacts();
+        fetchContacts(1);
     });
 
 
@@ -120,7 +120,7 @@ $(document).ready(function () {
 
     $('#nextPageBtn').click(function () {
         currentPage++;
-        fetchContacts();
+        fetchContacts(1);
     });
 
     function performSearch() {
@@ -132,7 +132,7 @@ $(document).ready(function () {
     $('#prevPageBtn').click(function () {
         if (currentPage > 1) {
             currentPage--;
-            fetchContacts();
+            fetchContacts(1);
         }
     });
 
@@ -148,11 +148,14 @@ $(document).ready(function () {
     });
 
 
-    function fetchContacts() {
+    function fetchContacts(btnAtasCek = 0) {
         $('#listLoader').removeClass('d-none');
         $('#contactTable').addClass('d-none');
         $('#contactTableBody').empty();
-        $("#listInvoiceLoader").removeClass('d-none');
+        if(btnAtasCek < 1){
+            $("#listInvoiceLoader").removeClass('d-none');
+        }
+
         // Disable buttons saat loading
         $('#prevPageBtn, #nextPageBtn').prop('disabled', true);
 
@@ -357,7 +360,8 @@ $(document).ready(function () {
                 search: currentInvSearch
             },
             success: function (response) {
-                console.log("Ee",response)
+                var notifContainer = $('#notif_save_checbox');
+                notifContainer.empty();
                 $('#listInvoiceLoader').addClass('d-none');
                 $('#invoiceTable').removeClass('d-none');
 
@@ -430,7 +434,7 @@ $(document).ready(function () {
 
 
     // Panggil fungsi saat halaman pertama kali dimuat
-    fetchContacts();
+    fetchContacts(1);
 
     function fetchDataAccountCodeByItem(idItem) {
         $.ajax({
@@ -505,12 +509,13 @@ $(document).ready(function () {
                 "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
             },
             success: function (response) {
-                console.log("update harga save", response.Items[0].Code)
+                console.log("update harga save", response.Items[0])
                 $formMessage.html('<strong>Sukses!</strong> Proudct & Service berhasil disimpan.').addClass('alert-success').removeClass('d-none');
                 //    $('#createContactForm')[0].reset(); // Kosongkan form
                 fetchContacts(); // Muat ulang daftar kontak
                 fetchDataInvoice(payload.Items[0].Code)
                 fetchDataAccountCodeByItem(response.Items[0].Code)
+                $("#name_paket_saved").html(response.Items[0].Name)
             },
             error: function (xhr) {
                 console.log('error', xhr)
