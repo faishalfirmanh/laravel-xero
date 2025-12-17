@@ -336,7 +336,7 @@ class InvoiceItem2Controller extends Controller
         $invoiceData = $response->json()['Invoices'][0];
         $payments = $invoiceData['Payments'] ?? [];
         $paymentBackups = [];
-
+        //dd($payments);
         // 2. Backup & Void Payment (Jika Status PAID/Partial)
         //dd($payments);
         if (!empty($payments)) {

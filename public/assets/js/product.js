@@ -242,8 +242,8 @@ $(document).ready(function () {
         });
     }
 
-    $("#btnSaveInvoice").on('click', function (e) {
-        $('#fullPageLoader').removeClass('d-none');
+    function submitSaveInvoiceCheck(){
+         $('#fullPageLoader').removeClass('d-none');
         let harga_update = $("#UnitPrice").val()
         let id_account_item = $("#account_id_item").val();
         $('#invoice_update_checkbox').removeClass('d-none');
@@ -336,8 +336,120 @@ $(document).ready(function () {
                 $('#fullPageLoader').addClass('d-none');
             }
         })
+    }
 
+    $("#btnSaveInvoicev2").on('click',function(e){
+        submitSaveInvoiceCheck()
+    });
+
+    $("#btnSaveInvoice").on('click', function (e) {
+         submitSaveInvoiceCheck()
     })
+
+
+    function loadViewNoPaging(response){
+        if (!response.length === 0) {
+            $('#invoiceTableBody').html('<tr><td colspan="10" class="text-center">Data tidak ditemukan</td></tr>');
+            $('#totalInvData').text(response.length);
+            $('#totalInvPage').text(1);
+            return;
+        }
+
+        let price_afer_save = $("#unit_price_save").val();
+        let rows = '';
+        let counter = 0;
+        response.forEach((item, key) => {
+            let date = formatDateIndo(item.tanggal);
+            let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
+            let nominalPaid = formatRupiah(item.amount_paid);
+            let statusBadge = getStatusBadge(item.status);
+            let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
+            let cek_item_payment = (item.payment && item.payment.length > 0) ? item.payment[0].PaymentID : 'kosong';
+
+            rows += `
+                <tr>
+                    <td>${counter++}</td>
+                    <td>${item.no_invoice}</td>
+                    <td>${item.nama_jamaah}</td>
+                    <td>${item.paket_name || '-'}</td>
+                    <td>${date}</td>
+                    <td>${dueDate}</td>
+                    <td class="text-end">${nominalPaid}</td>
+                    <td>${formatRupiah(item.total)}</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center">
+                        <a href="${finalUrl}" target="_blank" class="btn btn-primary btn-sm mb-1">Detail</a>
+                        <div class="form-check d-flex justify-content-center">
+                            <input class="form-check-input invoice-checkbox"
+                                type="checkbox"
+                                value="${key}"
+                                data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}_${cek_item_payment}"
+                                data-amount="${price_afer_save}">
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        $('#invoiceTableBody').html(rows);
+    }
+
+    function loadViewPaging(response){
+         // Cek data kosong
+        if (!response.data || response.data.length === 0) {
+            $('#invoiceTableBody').html('<tr><td colspan="10" class="text-center">Data tidak ditemukan</td></tr>');
+            $('#totalInvData').text(0);
+            $('#totalInvPage').text(1);
+            return;
+        }
+
+        // Update Info Pagination
+        const meta = response.meta;
+        $('#currentInvPage').text(meta.current_page);
+        $('#totalInvPage').text(meta.total_pages);
+        $('#totalInvData').text(meta.total_data);
+
+        // Logic Tombol Next/Prev
+        $('#prevInvPage').prop('disabled', meta.current_page <= 1);
+        $('#nextInvPage').prop('disabled', meta.current_page >= meta.total_pages);
+
+        let rows = '';
+        // Hitung nomor urut: (page-1) * limit + 1
+        let counter = ((meta.current_page - 1) * meta.limit) + 1;
+        let price_afer_save = $("#unit_price_save").val();
+
+        response.data.forEach((item, key) => {
+            let date = formatDateIndo(item.tanggal);
+            let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
+            let nominalPaid = formatRupiah(item.amount_paid);
+            let statusBadge = getStatusBadge(item.status);
+            let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
+            let cek_item_payment = (item.payment && item.payment.length > 0) ? item.payment[0].PaymentID : 'kosong';
+
+            rows += `
+                <tr>
+                    <td>${counter++}</td>
+                    <td>${item.no_invoice}</td>
+                    <td>${item.nama_jamaah}</td>
+                    <td>${item.paket_name || '-'}</td>
+                    <td>${date}</td>
+                    <td>${dueDate}</td>
+                    <td class="text-end">${nominalPaid}</td>
+                    <td>${formatRupiah(item.total)}</td>
+                    <td class="text-center">${statusBadge}</td>
+                    <td class="text-center">
+                        <a href="${finalUrl}" target="_blank" class="btn btn-primary btn-sm mb-1">Detail</a>
+                        <div class="form-check d-flex justify-content-center">
+                            <input class="form-check-input invoice-checkbox"
+                                type="checkbox"
+                                value="${key}"
+                                data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}_${cek_item_payment}"
+                                data-amount="${price_afer_save}">
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    }
 
    function fetchDataInvoice(idPaket) {
         // Simpan ID Paket ke variable global agar bisa dipakai saat klik Next/Prev
@@ -348,80 +460,24 @@ $(document).ready(function () {
         $('#invoiceTableBody').empty();
 
         // Disable pagination buttons while loading
-        $('#prevInvPage, #nextInvPage').prop('disabled', true);
+       // $('#prevInvPage, #nextInvPage').prop('disabled', true);
 
         $.ajax({
-            url: `${URL_INVOICE_PAGING}${currentIdPaket}`,
+            url: `${URL_INVOICE}${currentIdPaket}`,//URL_INVOICE_PAGING
             type: 'GET',
             dataType: 'json',
-            data: {
-                page: currentInvPage,
-                limit: 10,
-                search: currentInvSearch
-            },
+            // data: {
+            //     page: currentInvPage,
+            //     limit: 10,
+            //     search: currentInvSearch
+            // },
             success: function (response) {
+                console.log("invoice ",response)
                 var notifContainer = $('#notif_save_checbox');
                 notifContainer.empty();
                 $('#listInvoiceLoader').addClass('d-none');
                 $('#invoiceTable').removeClass('d-none');
-
-                // Cek data kosong
-                if (!response.data || response.data.length === 0) {
-                    $('#invoiceTableBody').html('<tr><td colspan="10" class="text-center">Data tidak ditemukan</td></tr>');
-                    $('#totalInvData').text(0);
-                    $('#totalInvPage').text(1);
-                    return;
-                }
-
-                // Update Info Pagination
-                const meta = response.meta;
-                $('#currentInvPage').text(meta.current_page);
-                $('#totalInvPage').text(meta.total_pages);
-                $('#totalInvData').text(meta.total_data);
-
-                // Logic Tombol Next/Prev
-                $('#prevInvPage').prop('disabled', meta.current_page <= 1);
-                $('#nextInvPage').prop('disabled', meta.current_page >= meta.total_pages);
-
-                let rows = '';
-                // Hitung nomor urut: (page-1) * limit + 1
-                let counter = ((meta.current_page - 1) * meta.limit) + 1;
-                let price_afer_save = $("#unit_price_save").val();
-
-                response.data.forEach((item, key) => {
-                    let date = formatDateIndo(item.tanggal);
-                    let dueDate = item.tanggal_due_date ? formatDateIndo(item.tanggal_due_date) : '-';
-                    let nominalPaid = formatRupiah(item.amount_paid);
-                    let statusBadge = getStatusBadge(item.status);
-                    let finalUrl = `${baseUrlOrigin}/detailInvoiceWeb/${item.parent_invoice_id}`;
-                    let cek_item_payment = (item.payment && item.payment.length > 0) ? item.payment[0].PaymentID : 'kosong';
-
-                    rows += `
-                        <tr>
-                            <td>${counter++}</td>
-                            <td>${item.no_invoice}</td>
-                            <td>${item.nama_jamaah}</td>
-                            <td>${item.paket_name || '-'}</td>
-                            <td>${date}</td>
-                            <td>${dueDate}</td>
-                            <td class="text-end">${nominalPaid}</td>
-                            <td>${formatRupiah(item.total)}</td>
-                            <td class="text-center">${statusBadge}</td>
-                            <td class="text-center">
-                                <a href="${finalUrl}" target="_blank" class="btn btn-primary btn-sm mb-1">Detail</a>
-                                <div class="form-check d-flex justify-content-center">
-                                    <input class="form-check-input invoice-checkbox"
-                                        type="checkbox"
-                                        value="${key}"
-                                        data-no-invoice="${item.parent_invoice_id}_${item.line_item_id}_${item.status}_${item.no_invoice}_${cek_item_payment}"
-                                        data-amount="${price_afer_save}">
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                $('#invoiceTableBody').html(rows);
+                loadViewNoPaging(response)
             },
             error: function (xhr) {
                 $('#listInvoiceLoader').addClass('d-none');

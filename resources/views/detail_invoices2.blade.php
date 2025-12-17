@@ -114,6 +114,12 @@
                         <div class="col-8">Total Tax</div>
                         <div class="col-4" id="taxTotalDisplay">0.00</div>
                     </div>
+                    <div id="div_payemnts">
+                        <div class="row mt-2">
+                            <div class="col-8"></div>
+                            <div class="col-4"></div>
+                        </div>
+                    </div>
                     <div class="row mt-3 total-row">
                         <div class="col-8">Total IDR</div>
                         <div class="col-4" id="grandTotalDisplay">0.00</div>
@@ -212,6 +218,27 @@
                 list_account = response.GroupedAccounts;
             }
         });
+    }
+
+    function formatJsonDate(jsonDate) {
+        // Ambil angka timestamp menggunakan Regex
+        const timestamp = parseInt(jsonDate.match(/\d+/)[0]);
+        const date = new Date(timestamp);
+
+        // Format ke Indonesia (DD MMMM YYYY) atau YYYY-MM-DD sesuai selera
+        return date.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+    // 3. Fungsi Format Rupiah
+    function formatRupiah(angka) {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(angka);
     }
 
     // --- 2. GENERATE HTML TABLE ROW ---
@@ -359,6 +386,26 @@
                         loadInvoiceToForm(data_invoice);
                         $("#val_status").val(data_invoice.Status)
                         //$('#fullPageLoaderInv').addClass('d-none');
+                    }
+                    if(response.Invoices[0].Payments.length > 0){
+                        $("#div_payemnts")
+                        const container = document.getElementById('div_payemnts');
+                        let htmlContent = '';
+                        response.Invoices[0].Payments.forEach(item => {
+                            const tanggalFix = formatJsonDate(item.Date);
+                            const amountFix = formatRupiah(item.Amount);
+                                htmlContent += `
+                                <div class="row mt-2">
+                                    <div class="col-8"><strong class="text-dark"><i class="fas fa-calendar-alt"></i> ${tanggalFix}</strong></div>
+                                    <div class="col-4">
+                                        <span class="" style="font-size: 0.9em;">
+                                            ${amountFix}
+                                        </span>
+                                    </div>
+                                </div>
+                                `;
+                        });
+                        container.innerHTML = htmlContent;
                     }
                 },
                 error: function (xhr, status, error) {

@@ -146,12 +146,14 @@
     <div class="card shadow mb-5">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">List Invoice <span style="color: white" id="name_paket_saved"></span> </h5>
-                <button class="btn btn-success btn-sm" id="btnSaveInvoice">
-                    <i class="fas fa-save"></i> Save Data
+            </div>
+            <div class="card-header d-flex justify-content-end align-items-center" style="background-color: white">
+                <button class="btn btn-success btn-sm" id="btnSaveInvoicev2">
+                    <i class="fas fa-save"></i> Save Data Update
                 </button>
             </div>
 
-            <div class="p-3 bg-light border-bottom">
+            {{-- <div class="p-3 bg-light border-bottom">
                 <div class="row g-2">
                     <div class="col-md-4">
                         <input type="text" id="searchInvoiceInput" class="form-control form-control-sm" placeholder="Cari Nama Jamaah...">
@@ -162,7 +164,7 @@
                         </button>
                     </div>
                 </div>
-            </div>
+            </div> --}}
 
             <div class="card-body">
                 <div id="ListInvoiceContainer">
@@ -198,10 +200,10 @@
                 </table>
             </div>
 
-            <div class="card-footer d-flex justify-content-between align-items-center" id="invoicePagination">
-                <button class="btn btn-secondary btn-sm" id="prevInvPage" disabled>Previous</button>
-                <span class="small">Page <span id="currentInvPage">1</span> of <span id="totalInvPage">1</span> (Total: <span id="totalInvData">0</span>)</span>
-                <button class="btn btn-secondary btn-sm" id="nextInvPage" disabled>Next</button>
+            <div class="card-footer d-flex justify-content-end align-items-center" id="invoicePagination">
+                <button class="btn btn-success btn-sm" id="btnSaveInvoice">
+                    <i class="fas fa-save"></i> Save Data Update
+                </button>
             </div>
 
             <div class="card-body">
