@@ -27,13 +27,25 @@ class ProductAndServiceController extends Controller
         return $tenantId;
     }
 
-    public function getProductAllNoBearer(XeroAuthService $xeroService)
+    public function getProductAllNoBearer(Request $request,XeroAuthService $xeroService)
     {
-        try {
+        try {//$request->invoice_id
              $tokenData = $this->getValidToken();
             if (!$tokenData) {
                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
             }
+
+            // $cleanIdInvoice = str_replace('"', '',  $request->invoice_id);
+            // $responseInvoice = Http::withHeaders([
+            //     'Authorization' => 'Bearer ' . $tokenData['access_token'],
+            //     'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+            //     'Content-Type' => 'application/json',
+            //     'Accept' => 'application/json',
+            // ])
+            // ->post("https://api.xero.com/api.xro/2.0/Invoices/$cleanIdInvoice")
+            // ->json();
+
+
               $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $tokenData['access_token'],
                 'Xero-Tenant-Id' => env('XERO_TENANT_ID'),

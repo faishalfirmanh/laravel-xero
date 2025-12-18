@@ -41,19 +41,20 @@
         <div class="row mb-4">
             <div class="col-md-3">
                 <label>To</label>
-                <input type="text" id="contactName" class="form-control" value="">
+                <input type="text" id="contactName" disabled class="form-control" value="">
             </div>
             <div class="col-md-2">
                 <label>Date</label>
-                <input type="date" id="invoiceDate" class="form-control" value="">
+                <input type="date" id="invoiceDate" disabled class="form-control" value="">
             </div>
             <div class="col-md-2">
                 <label>Due Date</label>
-                <input type="date" id="dueDate" class="form-control" value="">
+                <input type="date" id="dueDate" disabled class="form-control" value="">
             </div>
             <div class="col-md-2">
                 <label>Invoice #</label>
-                <input type="text" id="invoiceNumber" class="form-control" value="">
+                <input type="text" id="invoiceNumber" disabled class="form-control" value="">
+                <input type="hidden" id="invoiceCodeParent"/>
             </div>
         </div>
 
@@ -154,14 +155,15 @@
     let list_divisi = [];
     let list_account = [];
     let availableProducts = [];
+    let list_item_in_currentsRows = [];
 
     // --- 1. LOAD MASTER DATA ---
     $(document).ready(function() {
-        getAllitems();
         getAgent();
         getDevisi();
         getDataAccount();
         getAllTaxRate();
+        getAllitems();
     });
 
     function getAllitems(){
@@ -169,9 +171,13 @@
             url: `${BASE_URL}/api/get-data-no-limit`,
             type: 'GET',
             dataType: 'json',
+            data: {
+                invoice_id : $("#invoiceCodeParent").val()
+            },
             success: function (response) {
-               // console.log("get all data",response)
-                if(response.Items) availableProducts = response.Items;
+                if (response.Items) {
+                    availableProducts =  response.Items;
+                }
             }
         });
     }
@@ -380,6 +386,9 @@
                 type: 'GET',
                 dataType: 'json',
                 success: function (response) {
+                    response.Invoices[0].LineItems.forEach(element => {
+                        list_item_in_currentsRows.push(element.ItemCode)
+                    });
                     if(response.Invoices && response.Invoices.length > 0){
                         let data_invoice = response.Invoices[0];
                         getStatusBadge(data_invoice.Status);
@@ -387,7 +396,8 @@
                         $("#val_status").val(data_invoice.Status)
                         //$('#fullPageLoaderInv').addClass('d-none');
                     }
-                    if(response.Invoices[0].Payments.length > 0){
+                    //console.log(response.Invoices)
+                    if(response.Invoices[0].Payments){
                         $("#div_payemnts")
                         const container = document.getElementById('div_payemnts');
                         let htmlContent = '';
@@ -429,6 +439,7 @@
         $('#contactName').val(invoiceData.Contact.Name);
         $('#invoiceNumber').val(invoiceData.InvoiceNumber);
         $('#headerInvoiceNo').text(invoiceData.InvoiceNumber);
+        $("#invoiceCodeParent").val(invoiceData.InvoiceID)
 
         if (invoiceData.DateString) $('#invoiceDate').val(invoiceData.DateString.split('T')[0]);
         if (invoiceData.DueDateString) $('#dueDate').val(invoiceData.DueDateString.split('T')[0]);
