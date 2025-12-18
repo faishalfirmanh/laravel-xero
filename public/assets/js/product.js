@@ -13,6 +13,13 @@ let currentInvSearch = '';
 let currentIdPaket = 0;
 
 function getDataEdit(id) {
+    //
+    const element_form_ubahHarga = document.getElementById("createContactForm");
+    element_form_ubahHarga.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+
     $.ajax({
         url: `api/get-by-id/${id}`,
         type: 'GET',

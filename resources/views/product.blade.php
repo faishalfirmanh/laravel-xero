@@ -39,6 +39,15 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .form-check-input {
+            /* Mengubah border menjadi hitam solid */
+            border: 2px solid black !important;
+        }
+        /* Opsional: Agar saat dicentang bordernya tetap hitam (tidak berubah jadi biru) */
+        .form-check-input:checked {
+            border-color: black !important;
+            background-color: black !important; /* Ubah warna isi saat dicentang (opsional) */
+        }
     </style>
 </head>
 <body>

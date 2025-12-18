@@ -66,7 +66,7 @@ class InvoiceItem2Controller extends Controller
             $paymentBackups = [];
 
             // Jika ada pembayaran, lakukan Backup & Void (Delete) Payment
-           // dd($payment);
+            //dd($payments);
             if (!empty($payments)) {
                 foreach ($payments as $pay) {
                     $payId = $pay['PaymentID'];
@@ -172,8 +172,9 @@ class InvoiceItem2Controller extends Controller
                 foreach ($paymentBackups as $oldPayId) {
                     $this->restorePayment($invoiceId, $oldPayId);
                     // Hapus backup setelah sukses restore
-                    PaymentParams::where('payments_id', $oldPayId)->delete();
                 }
+
+                PaymentParams::where('invoice_id', $invoiceId)->delete();
             }
 
             return response()->json([
@@ -241,7 +242,7 @@ class InvoiceItem2Controller extends Controller
      */
     private function restorePayment($invoiceId, $oldPaymentId)
     {
-        $backup = PaymentParams::where('payments_id', $oldPaymentId)->first();
+        $backup = PaymentParams::where('payments_id', $oldPaymentId)->get();
         if (!$backup) return;
 
         // 1. Ambil Data Invoice Terbaru dari Xero untuk Cek Sisa Tagihan (AmountDue)
@@ -285,32 +286,113 @@ class InvoiceItem2Controller extends Controller
             $payAmount = $amountDue;
         }
 
+        if(count($backup) > 0){
+            foreach ($backup as $key => $value) {
+                $totalBayar = (float) $value->amount;
+                $payDate = $value->date;
+                $accId = $value->account_code;
+                $ref = $value->reference;
+
+                $bayarKeInvoice = 0;
+                $bayarKeOverpayment = 0;
+
+                if ($amountDue > 0) {
+                    if ($totalBayar <= $amountDue) {
+                        // Kasus A: Bayar pas atau kurang (Normal)
+                        $bayarKeInvoice = $totalBayar;
+                        $amountDue -= $totalBayar; // Kurangi sisa hutang lokal
+                    } else {
+                        // Kasus B: Bayar Lunas + Sisa Lebih (Overpayment)
+                        $bayarKeInvoice = $amountDue; // Bayar sisa hutang saja
+                        $bayarKeOverpayment = $totalBayar - $amountDue; // Sisanya simpan
+                        $amountDue = 0; // Hutang lunas
+                    }
+                } else {
+                    // Kasus C: Hutang sudah 0, tapi user kirim uang lagi (Full Overpayment)
+                    $bayarKeOverpayment = $totalBayar;
+                }
+
+                // -------------------------------------------------------
+                // EKSEKUSI A: POST PAYMENT (KE INVOICE)
+                // -------------------------------------------------------
+                if ($bayarKeInvoice > 0) {
+                    $resPay = Http::withHeaders($this->getHeaders())
+                        ->post('https://api.xero.com/api.xro/2.0/Payments', [
+                            "Payments" => [[
+                                "Invoice" => ["InvoiceID" => $invoice_idUnique],
+                                "Account" => ["AccountID" => $accId],
+                                "Date" => $payDate,
+                                "Amount" => $bayarKeInvoice,
+                                "Reference" => $ref
+                            ]]
+                        ]);
+
+                    if ($resPay->failed()) {
+                        Log::error("Gagal Payment Invoice: " . $resPay->body());
+                        throw new \Exception("Gagal Restore Payment: " . $resPay->body());
+                    } else {
+                        Log::info("Sukses bayar Invoice: $bayarKeInvoice");
+                    }
+                }
+                // -------------------------------------------------------
+                // EKSEKUSI B: PUT BANK TRANSACTION (OVERPAYMENT)
+                // -------------------------------------------------------
+                if ($bayarKeOverpayment > 0) {
+                    Log::warning("Membuat Overpayment sebesar: $bayarKeOverpayment");
+
+                    $resOver = Http::withHeaders($this->getHeaders())
+                        ->put('https://api.xero.com/api.xro/2.0/BankTransactions', [
+                            "BankTransactions" => [[
+                                "Type" => "RECEIVE-OVERPAYMENT", // Tipe khusus Overpayment
+                                "Contact" => ["ContactID" => $contactID], // Wajib ada Contact
+                                "BankAccount" => ["AccountID" => $accId], // Masuk ke Bank mana
+                                "Date" => $payDate,
+                                "Reference" => $ref . " (Overpayment)",
+                                "LineItems" => [[
+                                    "Description" => "Overpayment / Kelebihan bayar",
+                                    "UnitAmount" => $bayarKeOverpayment,
+                                    "AccountCode" => "800", // Ganti kode akun ini jika perlu (misal akun suspens/liability)
+                                    // Atau hapus baris "AccountCode" agar Xero menggunakan default Accounts Receivable
+                                ]]
+                            ]]
+                        ]);
+
+                    if ($resOver->failed()) {
+                        Log::error("Gagal Overpayment: " . $resOver->body());
+                        // Opsional: throw exception atau biarkan lanjut
+                    } else {
+                        Log::info("Sukses catat Overpayment.");
+                    }
+                }
+            }
+        }
+
         // 3. Kirim Payment Baru
-        $payloadPayment = [
-            "Payments" => [[
-                "Invoice" => ["InvoiceID" => $invoiceId],
-                // "Account" => ["Code" => $backup->account_code],
-                "Account" => ["AccountID" => $backup->account_code],
-                "Date" => $backup->date,
-                "Amount" => $totNya,//$payAmount, // Gunakan hasil perhitungan di atas
-                "Reference" => $backup->reference
-            ]]
-        ];
+        // $payloadPayment = [
+        //     "Payments" => [[
+        //         "Invoice" => ["InvoiceID" => $invoiceId],
+        //         // "Account" => ["Code" => $backup->account_code],
+        //         "Account" => ["AccountID" => $backup->account_code],
+        //         "Date" => $backup->date,
+        //         "Amount" => $totNya,//$payAmount, // Gunakan hasil perhitungan di atas
+        //         "Reference" => $backup->reference
+        //     ]]
+        // ];
 
-        // Fallback Account ID jika Code kosong
-        if (empty($backup->account_code) && !empty($backup->account_id)) {
-             $payloadPayment['Payments'][0]['Account'] = ["AccountID" => $backup->account_id];
-             unset($payloadPayment['Payments'][0]['Account']['Code']);
-        }
+        // // Fallback Account ID jika Code kosong
+        // if (empty($backup->account_code) && !empty($backup->account_id)) {
+        //      $payloadPayment['Payments'][0]['Account'] = ["AccountID" => $backup->account_id];
+        //      unset($payloadPayment['Payments'][0]['Account']['Code']);
+        // }
 
-        $resPay = Http::withHeaders($this->getHeaders())
-            ->post($this->xeroBaseUrl . '/Payments', $payloadPayment);
+        // $resPay = Http::withHeaders($this->getHeaders())
+        //     ->post($this->xeroBaseUrl . '/Payments', $payloadPayment);
 
-        if ($resPay->failed()) {
-            Log::error("Edit Peritem | Gagal Restore Payment $oldPaymentId: " . $resPay->body());
-        } else {
-            Log::info(" Edit Peritem | Sukses Restore Payment $oldPaymentId sebesar $payAmount");
-        }
+        // if ($resPay->failed()) {
+        //     Log::error("Edit Peritem | Gagal Restore Payment $oldPaymentId: " . $resPay->body());
+        // } else {
+        //     Log::info(" Edit Peritem | Sukses Restore Payment $oldPaymentId sebesar $payAmount");
+        // }
     }
 
     /**
