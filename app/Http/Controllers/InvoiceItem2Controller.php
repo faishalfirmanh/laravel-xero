@@ -333,8 +333,9 @@ class InvoiceItem2Controller extends Controller
         // ------------------------------------------------------------------
         // EKSEKUSI B: PUT BANK TRANSACTION (Overpayment / Saldo Mengendap)
         // ------------------------------------------------------------------
+         Log::info("total overpayment $payToOverpayment");
         if ($payToOverpayment > 0) {
-            Log::info("Membuat Overpayment (Saldo) sebesar: $payToOverpayment");
+            Log::info("Membuat Overpayment (Saldo) sebesar: $payToOverpayment BankAccount $accId | ");
 
             $payloadOverpayment = [
                 "BankTransactions" => [[
@@ -344,7 +345,7 @@ class InvoiceItem2Controller extends Controller
                     "Date"        => $payDate,
                     "Reference"   => $ref . " (Ref: $invoiceXero[InvoiceNumber])",
                     "LineItems"   => [[
-                        "Description" => "Overpayment adjustments for Invoice " . $invoiceXero['InvoiceNumber'],
+                        "Description" => "Overpayment pada Invoice " . $invoiceXero['InvoiceNumber'],
                         "UnitAmount"  => $payToOverpayment,
                         // AccountCode kosongkan agar Xero otomatis pakai Accounts Receivable / AP
                         // Atau isi dengan kode akun Liability (Hutang ke Customer) jika ada

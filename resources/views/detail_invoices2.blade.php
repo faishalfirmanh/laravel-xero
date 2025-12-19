@@ -125,6 +125,14 @@
                         <div class="col-8">Total IDR</div>
                         <div class="col-4" id="grandTotalDisplay">0.00</div>
                     </div>
+                    <div class="row mt-3 total-row">
+                        <div class="col-8">Amount Paid</div>
+                        <div class="col-4" id="TotalAmountPaidDisplay">0.00</div>
+                    </div>
+                     <div class="row mt-3 total-row">
+                        <div class="col-8" style="color:red">Amount Due</div>
+                        <div class="col-4" id="TotalAmountDueDisplay">0.00</div>
+                    </div>
                 </div>
             </div>
         </form>
@@ -155,6 +163,7 @@
     let list_divisi = [];
     let list_account = [];
     let availableProducts = [];
+    let available_products_not_same = [];
     let list_item_in_currentsRows = [];
 
     // --- 1. LOAD MASTER DATA ---
@@ -164,7 +173,24 @@
         getDataAccount();
         getAllTaxRate();
         getAllitems();
+        getAllitemsNotSame();
     });
+
+    function   getAllitemsNotSame(){
+        $.ajax({
+            url: `${BASE_URL}/api/get-product-withoutsame`,
+            type: 'GET',
+            dataType: 'json',
+            data: {
+                invoice_id : $("#invoiceCodeParent").val()
+            },
+            success: function (response) {
+                if (response.Items) {
+                    available_products_not_same =  response.Items;
+                }
+            }
+        });
+    }
 
     function getAllitems(){
          $.ajax({
@@ -275,13 +301,24 @@
         });
 
         // --- ITEM ---
-        let itemOptionsHtml = `<option value="">Select Item</option>`;
-        availableProducts.forEach(product => {
-            const pCode = product.Code;
-            const pName = product.Name;
-            const isSelected = (itemCode == pCode) ? 'selected' : '';
-            itemOptionsHtml += `<option value="${pCode}" ${isSelected}>${pName}</option>`;
-        });
+      let itemOptionsHtml = `<option value="">Select Item</option>`;
+       if(item != null){
+            availableProducts.forEach(product => {
+                const pCode = product.Code;
+                const pName = product.Name;
+                const isSelected = (itemCode == pCode) ? 'selected' : '';
+                itemOptionsHtml += `<option value="${pCode}" ${isSelected}>${pName}</option>`;
+            });
+       }else{
+            available_products_not_same.forEach(product => {
+                const pCode = product.Code;
+                const pName = product.Name;
+                const isSelected = (itemCode == pCode) ? 'selected' : '';
+                itemOptionsHtml += `<option value="${pCode}">${pName}</option>`;
+            });
+       }
+
+
 
         // --- TAX RATE ---
         let itemOptionsTaxRate = `<option value="" data-rate="0">Select Tax</option>`;
@@ -386,6 +423,8 @@
                 type: 'GET',
                 dataType: 'json',
                 success: function (response) {
+                    $("#TotalAmountPaidDisplay").text(formatRupiah(response.Invoices[0].AmountPaid))
+                     $("#TotalAmountDueDisplay").text(formatRupiah(response.Invoices[0].AmountDue))
                     response.Invoices[0].LineItems.forEach(element => {
                         list_item_in_currentsRows.push(element.ItemCode)
                     });
@@ -648,6 +687,9 @@
                         $(this).remove();
                         calculateGrandTotal();
                     });
+                    setTimeout(() => {
+                        fetchDataDummy();
+                    }, 1000);
                 } else {
                     alert("Gagal menghapus: " + response.message);
                 }

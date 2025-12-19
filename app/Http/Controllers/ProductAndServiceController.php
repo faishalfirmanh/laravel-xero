@@ -27,6 +27,56 @@ class ProductAndServiceController extends Controller
         return $tenantId;
     }
 
+    public function getProductNoSame(Request $request,XeroAuthService $xeroService)
+    {
+          try {
+             $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+               return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+
+            $cleanIdInvoice = str_replace('"', '',  $request->invoice_id);
+            $responseInvoice =  Http::withHeaders([
+                'Authorization' => 'Bearer ' . $tokenData["access_token"],
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->get("https://api.xero.com/api.xro/2.0/Invoices/$cleanIdInvoice");
+
+
+            $list_item_rows = $responseInvoice->json()["Invoices"][0]["LineItems"];
+            $code_item = [];
+            foreach ($list_item_rows as $key => $value) {
+              $code_item[] = $value["ItemCode"];
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $tokenData['access_token'],
+                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->get('https://api.xero.com/api.xro/2.0/Items')->json()['Items'];
+
+            $filtered_items = array_values(array_filter($response, function ($item) use ($code_item) {
+                return isset($item['Code']) && !in_array($item['Code'], $code_item);
+            }));
+            return response()->json([
+                'status' => 'success',
+                'count_all' => count($response),
+                'count_filtered' => count($filtered_items),
+                'Items' => $filtered_items // Ini data yang ditampilkan
+            ]);
+            //return  $response->json();
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Detail Error: ' . $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ], 500);
+        }
+    }
+
     public function getProductAllNoBearer(Request $request,XeroAuthService $xeroService)
     {
         try {//$request->invoice_id
@@ -34,17 +84,6 @@ class ProductAndServiceController extends Controller
             if (!$tokenData) {
                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
             }
-
-            // $cleanIdInvoice = str_replace('"', '',  $request->invoice_id);
-            // $responseInvoice = Http::withHeaders([
-            //     'Authorization' => 'Bearer ' . $tokenData['access_token'],
-            //     'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
-            //     'Content-Type' => 'application/json',
-            //     'Accept' => 'application/json',
-            // ])
-            // ->post("https://api.xero.com/api.xro/2.0/Invoices/$cleanIdInvoice")
-            // ->json();
-
 
               $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $tokenData['access_token'],

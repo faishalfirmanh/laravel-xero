@@ -52,6 +52,7 @@ Route::post('/save-data-product', [ProductAndServiceController::class, 'updatePr
 //proudct
 Route::get('/get-data-product', [ProductAndServiceController::class, 'getProduct']);//used
 Route::get('/get-data-no-limit', [ProductAndServiceController::class, 'getProductAllNoBearer']);//used
+Route::get('/get-product-withoutsame', [ProductAndServiceController::class, 'getProductNoSame']);
 Route::get('/get-by-id/{id}', [ProductAndServiceController::class, 'getProductById']);//used
 
 //payment
