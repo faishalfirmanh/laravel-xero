@@ -209,6 +209,7 @@ class InvoiceItem2Controller extends Controller
         $date = $this->parseXeroDate($payment["Date"]);
 
       //  dd($payment["Account"]["AccountID"]);
+        //dd($payment);//f31fd27e-570e-4898-9697-835258ebdfb1
         PaymentParams::updateOrCreate(
             ['payments_id' => $paymentId],
             [
@@ -217,7 +218,8 @@ class InvoiceItem2Controller extends Controller
                 'account_id' => $payment['Account']['AccountID'] ?? null,
                 'date' => $date,
                 'amount' => $payment["Amount"],
-                'reference' => $payment["Reference"] ?? "Re-payment API"
+                'reference' => $payment["Reference"] ?? "Re-payment API detail baris",
+                'bank_account_id'=>$this->getBankAccountFromPayment($paymentId)
             ]
         );
     }
@@ -235,6 +237,20 @@ class InvoiceItem2Controller extends Controller
         }
     }
 
+
+    public function getBankAccountFromPayment($paymentId)
+    {
+        $response = Http::withHeaders($this->getHeaders())
+            ->get($this->xeroBaseUrl . '/Payments/' . $paymentId);
+        if ($response->failed()) {
+            return null; // Handle error
+        }
+        $paymentData = $response->json()['Payments'][0];
+        $bankAccountId = $paymentData['Account']['AccountID'];
+
+        $bankCode = $paymentData['Account']['Code'] ?? '-';
+        return $bankAccountId;
+    }
     /**
      * Buat Ulang (Restore) Payment di Xero setelah Invoice diedit
      */
@@ -302,8 +318,9 @@ class InvoiceItem2Controller extends Controller
 
         // Siapkan Data Umum
         $payDate = $backup->date;
-        $accId   = $backup->account_id ?? $backup->account_code; // Utamakan ID
+        $accId   = $backup->account_id ?? $backup->account_code; // Utamakan ID,
         $ref     = $backup->reference;
+        $bank_id = $backup->bank_account_id;
 
         // ------------------------------------------------------------------
         // EKSEKUSI A: POST PAYMENT (Bayar ke Invoice)
@@ -336,12 +353,11 @@ class InvoiceItem2Controller extends Controller
          Log::info("total overpayment $payToOverpayment");
         if ($payToOverpayment > 0) {
             Log::info("Membuat Overpayment (Saldo) sebesar: $payToOverpayment BankAccount $accId | ");
-
             $payloadOverpayment = [
                 "BankTransactions" => [[
                     "Type"        => "RECEIVE-OVERPAYMENT",
                     "Contact"     => ["ContactID" => $contactID],
-                    "BankAccount" => ["AccountID" => $accId],
+                    "BankAccount" => ["AccountID" => $accId],//Harus account dengan type bank yang bisa
                     "Date"        => $payDate,
                     "Reference"   => $ref . " (Ref: $invoiceXero[InvoiceNumber])",
                     "LineItems"   => [[
@@ -358,6 +374,7 @@ class InvoiceItem2Controller extends Controller
 
             if ($resOver->failed()) {
                 Log::error("Gagal Restore Overpayment: " . $resOver->body());
+                Log::error("error", $payloadOverpayment);
             } else {
                 Log::info("Sukses Restore Overpayment: $payToOverpayment");
             }
@@ -444,7 +461,7 @@ class InvoiceItem2Controller extends Controller
             foreach ($paymentBackups as $oldPayId) {
                 $this->restorePayment($invoiceId, $oldPayId);
                 // Hapus data backup dari DB agar tidak menumpuk
-                PaymentParams::where('payments_id', $oldPayId)->delete();
+                //PaymentParams::where('payments_id', $oldPayId)->delete();
             }
         }
 

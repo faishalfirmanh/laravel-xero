@@ -188,7 +188,7 @@ class InvoicesDuplicateController extends Controller
                         "BankTransactions" => [[
                             "Type" => "RECEIVE-OVERPAYMENT", // Tipe khusus Overpayment
                             "Contact" => ["ContactID" => $contactID], // Wajib ada Contact
-                            "BankAccount" => ["AccountID" => $accId], // Masuk ke Bank mana
+                            "BankAccount" => ["AccountID" => $accId], // Masuk ke Bank mana,//Harus account dengan type bank yang bisa
                             "Date" => $payDate,
                             "Reference" => $ref . " (Overpayment)",
                             "LineItems" => [[
@@ -236,7 +236,7 @@ class InvoicesDuplicateController extends Controller
         if ($response->json()["Payments"][0]["Status"] == 'DELETED') return;
 
         $account_id_payments = $response->json()["Payments"][0]["Account"]["AccountID"];
-        return $response->json()["Payments"][0]["Account"]["AccountID"];
+        return $account_id_payments;//$response->json()["Payments"][0]["Account"]["AccountID"];
     }
 
     public function getDetailPayment($codeInvoice) {
@@ -299,7 +299,11 @@ class InvoicesDuplicateController extends Controller
     public function insertToDb($amount, $account_code, $date, $invoice_id, $reference_id, $idPayment) {
         PaymentParams::updateOrCreate(
             ['payments_id' => $idPayment],
-            ['invoice_id' => $invoice_id, 'account_code' => $account_code, 'date' => $date, 'amount' => $amount, 'reference' => $reference_id]
+            ['invoice_id' => $invoice_id,
+             'account_code' => $account_code,
+             'date' => $date,
+             'amount' => $amount,
+              'reference' => $reference_id]
         );
     }
 

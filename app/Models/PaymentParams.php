@@ -14,7 +14,8 @@ class PaymentParams extends Model
         'date',
         'amount',
         'reference',
-        'payments_id'
+        'payments_id',
+        'bank_account_id'
     ];
 
 }

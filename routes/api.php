@@ -12,6 +12,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\InvoiceItemController;
 use App\Http\Controllers\XeroContactController;
 use App\Http\Controllers\InvoiceItem2Controller;
+use App\Http\Controllers\BankController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -81,3 +82,8 @@ Route::get('/get_agent', [TrackingController::class, 'getAgent']);//used
 Route::get('/getAllAccount', [PaymentController::class, 'getGroupedAccounts']);//used
 
 Route::post('/updatePerbaris/{parent_id}/{amount_input}/{line_item_id}', [InvoicesController::class, 'updateInvoicePerRows']);//untuk testing
+
+//paid
+Route::get('/get-bank/{paymentId}', [InvoiceItem2Controller::class, 'getBankAccountFromPayment']);
+Route::post('/bank-overpayment', [BankController::class, 'postBankOverpayment']);
+Route::get('/get-all-bank', [BankController::class, 'getAllBank']);
