@@ -218,7 +218,7 @@ class InvoiceItem2Controller extends Controller
                 'account_id' => $payment['Account']['AccountID'] ?? null,
                 'date' => $date,
                 'amount' => $payment["Amount"],
-                'reference' => $payment["Reference"] ?? "Re-payment API detail baris",
+                'reference' => "by system" ?? "Re-payment API detail baris",
                 'bank_account_id'=>$this->getBankAccountFromPayment($paymentId)
             ]
         );
@@ -332,7 +332,7 @@ class InvoiceItem2Controller extends Controller
                     "Account"   => ["AccountID" => $accId], // Pastikan AccountID Bank valid
                     "Date"      => $payDate,
                     "Amount"    => $payToInvoice,
-                    "Reference" => $ref
+                    "Reference" => "re payment by system"
                 ]]
             ];
 
@@ -359,7 +359,7 @@ class InvoiceItem2Controller extends Controller
                     "Contact"     => ["ContactID" => $contactID],
                     "BankAccount" => ["AccountID" => $accId],//Harus account dengan type bank yang bisa
                     "Date"        => $payDate,
-                    "Reference"   => $ref . " (Ref: $invoiceXero[InvoiceNumber])",
+                    "Reference"   => $ref . "overpayment (Ref: $invoiceXero[InvoiceNumber])",
                     "LineItems"   => [[
                         "Description" => "Overpayment pada Invoice " . $invoiceXero['InvoiceNumber'],
                         "UnitAmount"  => $payToOverpayment,

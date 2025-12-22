@@ -129,9 +129,12 @@
                         <div class="col-8">Amount Paid</div>
                         <div class="col-4" id="TotalAmountPaidDisplay">0.00</div>
                     </div>
-                     <div class="row mt-3 total-row">
+                     <div class="row mt-3 total-row"  style="border-bottom: 3px solid #000;">
                         <div class="col-8" style="color:red">Amount Due</div>
                         <div class="col-4" id="TotalAmountDueDisplay">0.00</div>
+                    </div>
+                    <div id="history_local_payments">
+                        <h5>Local history </h5>
                     </div>
                 </div>
             </div>
@@ -236,6 +239,7 @@
             type: 'GET',
             dataType: 'json',
             success: function (response) {
+               // console.log("list agent",response)
                 list_agent = response[0];
             }
         });
@@ -263,6 +267,16 @@
             month: 'long',
             year: 'numeric'
         });
+    }
+
+    function formatDateStringToText(tgl){
+        const date = new Date(tgl);
+        const hasil = date.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        return hasil;
     }
     // 3. Fungsi Format Rupiah
     function formatRupiah(angka) {
@@ -364,6 +378,7 @@
         }
 
         let itemOptionsAgent = `<option value="">Select Agent</option>`;
+        console.log("liss",list_agent)
         list_agent.forEach(ag => {
             // Cek apakah ID ini sama dengan yang tersimpan
             const isSel = (ag.TrackingOptionID == savedAgentId) ? 'selected' : '';
@@ -433,6 +448,7 @@
                         getStatusBadge(data_invoice.Status);
                         loadInvoiceToForm(data_invoice);
                         $("#val_status").val(data_invoice.Status)
+                        loadHistoryPaymentLocal()
                         //$('#fullPageLoaderInv').addClass('d-none');
                     }
                     //console.log(response.Invoices)
@@ -459,6 +475,52 @@
                 },
                 error: function (xhr, status, error) {
                     console.error('Error fetching invoice:', xhr, status, error);
+                     Swal.fire({
+                        title: 'Erros!',
+                        text: `load data detail invoice ${error}`,
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    })
+
+                },
+                complete: function(e){
+                  //$('#fullPageLoader').addClass('d-none');
+                  //$('#fullPageLoader').css('display', 'none');
+                }
+            });
+    }
+
+    function loadHistoryPaymentLocal(){
+          let val_invoice = $("#invoiceCodeParent").val();
+          let url_history_pay = `${BASE_URL}/api/get-history-invoice/${val_invoice}`;
+            $.ajax({
+                url: url_history_pay,
+                type: 'GET',
+                dataType: 'json',
+                success: function (response) {
+                   if(response.data.length >0){
+                        const container_local_pay = document.getElementById('history_local_payments');
+                        let htmlContent_local = '';
+                        console.log('ass',response.data)
+                        response.data.forEach(item => {
+                            const tanggalFix = formatDateStringToText(item.date);
+                            const amountFix = formatRupiah(item.amount);
+                                htmlContent_local += `
+                                <div class="row mt-2">
+                                    <div class="col-8"><strong class="text-dark"><i class="fas fa-calendar-alt"></i> ${tanggalFix}</strong></div>
+                                    <div class="col-4">
+                                        <span class="" style="font-size: 0.9em;">
+                                            ${amountFix}
+                                        </span>
+                                    </div>
+                                </div>
+                                `;
+                        });
+                        container_local_pay.innerHTML = htmlContent_local;
+                   }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error fetching history local payments :', xhr, status, error);
                      Swal.fire({
                         title: 'Erros!',
                         text: `load data detail invoice ${error}`,

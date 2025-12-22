@@ -265,7 +265,7 @@ class InvoicesDuplicateController extends Controller
                 $account_code_api,
                 self::xeroDateToPhp($value_inv["Date"]),
                 $codeInvoice,
-                "Re-payment api updated",
+                "Re-payment api updated BY system",
                 $value_inv["PaymentID"]
             );
             self::updateInvoicePaidPerRows($value_inv["PaymentID"]);

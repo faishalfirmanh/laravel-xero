@@ -12,6 +12,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\InvoiceItemController;
 use App\Http\Controllers\XeroContactController;
 use App\Http\Controllers\InvoiceItem2Controller;
+use App\Http\Controllers\PaymentHistoryController;
 use App\Http\Controllers\BankController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +67,7 @@ Route::get('/getInvoiceByIdPaket/{itemCode}', [InvoicesController::class, 'getIn
 Route::get('/getInvoiceByIdPaketPaging/{itemCode}', [InvoicesController::class, 'getInvoiceByIdPaketPaging']);
 Route::get('/getDetailInvoice/{idInvoice}', [InvoicesController::class, 'getDetailInvoice']);//used
 Route::get('/get-invoices', [InvoicesController::class, 'getAllInvoices']);
+Route::get('/all-invoices-no-limit',[InvoicesController::class,'listAllInvoices']);
 Route::post('/submitUpdateinvoices', [InvoicesDuplicateController::class, 'updateInvoiceSelected']);//update semua select submit
 
 //save per rows
@@ -87,3 +89,7 @@ Route::post('/updatePerbaris/{parent_id}/{amount_input}/{line_item_id}', [Invoic
 Route::get('/get-bank/{paymentId}', [InvoiceItem2Controller::class, 'getBankAccountFromPayment']);
 Route::post('/bank-overpayment', [BankController::class, 'postBankOverpayment']);
 Route::get('/get-all-bank', [BankController::class, 'getAllBank']);
+
+//tes cron
+Route::get('/tes-cron', [PaymentHistoryController::class, 'insertToHistory']);
+Route::get('/get-history-invoice/{invoice_id}', [PaymentHistoryController::class, 'getHistoryInvoice']);

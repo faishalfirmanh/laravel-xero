@@ -15,17 +15,17 @@ class ProductAndServiceController extends Controller
         return view('product');
     }
 
-    private function getTenantId($token)
-    {
-        $config = \App\Models\ConfigSettingXero::first();
-        if ($config->xero_tenant_id)
-            return $config->xero_tenant_id;
+    // private function getTenantId($token)
+    // {
+    //     $config = \App\Models\ConfigSettingXero::first();
+    //     if ($config->xero_tenant_id)
+    //         return $config->xero_tenant_id;
 
-        $response = Http::withToken($token)->get('https://api.xero.com/connections');
-        $tenantId = $response->json()[0]['tenantId'];
-        $config->update(['xero_tenant_id' => $tenantId]);
-        return $tenantId;
-    }
+    //     $response = Http::withToken($token)->get('https://api.xero.com/connections');
+    //     $tenantId = $response->json()[0]['tenantId'];
+    //     $config->update(['xero_tenant_id' => $tenantId]);
+    //     return $tenantId;
+    // }
 
     public function getProductNoSame(Request $request,XeroAuthService $xeroService)
     {
@@ -116,6 +116,7 @@ class ProductAndServiceController extends Controller
                 return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
             }
 
+            $tenantId = $this->getTenantId($tokenData['access_token']);
             // --- KONFIGURASI LIMIT ---
             $limit = 10;           // Kita ingin limit 10
             $xeroBatchSize = 100;  // Xero selalu return 100
@@ -148,11 +149,12 @@ class ProductAndServiceController extends Controller
             // 4. Panggil Xero API
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $tokenData['access_token'],
-                'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+                'Xero-Tenant-Id' => $tenantId,//env('XERO_TENANT_ID'),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->get('https://api.xero.com/api.xro/2.0/Items', $queryParams);
 
+            //dd($tenantId);
             if ($response->failed()) {
                 return response()->json(['message' => 'Xero API Error', 'details' => $response->json()], $response->status());
             }

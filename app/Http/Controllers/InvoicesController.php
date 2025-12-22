@@ -280,6 +280,33 @@ class InvoicesController extends Controller
         return response()->json($update_tiap_row_invoices->json() ?: ['message' => 'Xero API Error'], $update_tiap_row_invoices->status());
     }
 
+    public function listAllInvoices()
+    {
+
+        $tokenData = $this->getValidToken();
+
+        if (!$tokenData) {
+            return response()->json(['message' => 'Token kosong/invalid.'], 401);
+        }
+
+        $invoicesResponse = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $tokenData['access_token'],
+            'Xero-Tenant-Id' => env('XERO_TENANT_ID'),
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ])->get('https://api.xero.com/api.xro/2.0/Invoices');
+
+        if ($invoicesResponse->failed()) {
+            return response()->json(['error' => 'Gagal ambil invoices'], 500);
+        }
+
+          return response()->json([
+            'data'=>$invoicesResponse->json()['Invoices'],
+            'total'=>count($invoicesResponse->json()['Invoices'])
+          ]);
+
+    }
+
     public function getInvoiceByIdPaketPaging(Request $request, $itemCode = 0)
     {
         try {
@@ -382,6 +409,7 @@ class InvoicesController extends Controller
     public function getInvoiceByIdPaket($itemCode = 0)
     {
         //  dd($itemCode);
+        set_time_limit(0);
         try {
 
             $tokenData = $this->getValidToken();

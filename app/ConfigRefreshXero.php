@@ -11,16 +11,16 @@ trait ConfigRefreshXero
 {
     //
 
-    private $tokenFile = 'xero_token.json';
+    private $tokenFile = 'xero_token_2.json';//'xero_token.json';
 
     public function connect()
     {
-        $scope = 'offline_access accounting.contacts accounting.settings';
+        $scope = 'accounting.contacts accounting.contacts.read accounting.settings accounting.settings.read accounting.transactions accounting.transactions.read offline_access';
 
         $url = 'https://login.xero.com/identity/connect/authorize?' . http_build_query([
             'response_type' => 'code',
-            'client_id' => env('XERO_CLIENT_ID'),
-            'redirect_uri' => env('XERO_REDIRECT_URL'),
+            'client_id' => env('XERO_PROD_CLIENT_ID'),//env('XERO_CLIENT_ID'),
+            'redirect_uri' => env('XERO_REDIRECT_URL_PROD'),//env('XERO_REDIRECT_URL'),
             'scope' => $scope,
             'state' => 'SAFD2142432'
         ]);
@@ -36,11 +36,11 @@ trait ConfigRefreshXero
             return 'Gagal: Tidak ada code dari Xero.';
         }
 
-        $response = Http::asForm()->withBasicAuth(env('XERO_CLIENT_ID'), env('XERO_CLIENT_SECRET'))
+        $response = Http::asForm()->withBasicAuth(env('XERO_PROD_CLIENT_ID'), env('XERO_REDIRECT_URL_PROD'))
             ->post('https://identity.xero.com/connect/token', [
                 'grant_type' => 'authorization_code',
                 'code' => $request->code,
-                'redirect_uri' => env('XERO_REDIRECT_URL'),
+                'redirect_uri' => env('XERO_REDIRECT_URL_PROD'),
             ]);
 
         if ($response->successful()) {
@@ -58,6 +58,7 @@ trait ConfigRefreshXero
     private function getValidToken()
     {
         if (!Storage::exists($this->tokenFile)) {
+            Log::error("file json config xero tidak ada");
             // $write_file = [
             //     'access_token' => '',
             //     'expires_in' => 1800,
@@ -91,7 +92,7 @@ trait ConfigRefreshXero
 
     private function refreshToken($currentRefreshToken)
     {
-        $response = Http::asForm()->withBasicAuth(env('XERO_CLIENT_ID'), env('XERO_CLIENT_SECRET'))
+        $response = Http::asForm()->withBasicAuth(env('XERO_PROD_CLIENT_ID'), env('XERO_PROD_CLIENT_SECRET'))
             ->post('https://identity.xero.com/connect/token', [
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $currentRefreshToken

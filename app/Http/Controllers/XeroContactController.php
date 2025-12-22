@@ -22,7 +22,7 @@ class XeroContactController extends Controller
      */
     public function connect()
     {
-        $scope = 'offline_access accounting.contacts accounting.settings';
+        $scope = 'accounting.contacts accounting.contacts.read accounting.settings accounting.settings.read accounting.transactions accounting.transactions.read offline_access';
 
         $state = Str::random(64);
         session(['oauth2_state' => $state]);
@@ -30,7 +30,7 @@ class XeroContactController extends Controller
         $url = 'https://login.xero.com/identity/connect/authorize?' . http_build_query([
             'response_type' => 'code',
             'client_id' => env('XERO_PROD_CLIENT_ID'),
-            'redirect_uri' => env('XERO_REDIRECT_URL_PROD'),
+            'redirect_uri' =>env('XERO_REDIRECT_URL_PROD'),
             'scope' => $scope,
             'state' => '1dfa45sdf',
             'prompt' => 'consent'
@@ -49,19 +49,21 @@ class XeroContactController extends Controller
         }
 
         $response = Http::asForm()->withBasicAuth(
-            env('XERO_PROD_CLIENT_ID'),
-            env('XERO_PROD_CLIENT_SECRET'))
+            env('XERO_PROD_CLIENT_ID'),//env('XERO_CLIENT_ID'),//
+            env('XERO_PROD_CLIENT_SECRET')
+            // env('XERO_CLIENT_SECRET')
+            )
             ->post('https://identity.xero.com/connect/token', [
                 'grant_type' => 'authorization_code',
                 'code' => $request->code,
-                'redirect_uri' => env('XERO_REDIRECT_URL_PROD'),
+                'redirect_uri' => env('XERO_REDIRECT_URL_PROD'),//env('XERO_REDIRECT_URL')//
             ]);
 
         if ($response->successful()) {
             $tokens = $response->json();
             $this->saveToken($tokens); // Simpan ke file JSON
             // $res_json = [
-            //     "pesan" =>"Koneksi Berhasil! Token tersimpan di storage/app/private/{$this->tokenFile}. Sekarang coba akses /xero/contacts",
+            //     "pesan" =>"Koneksi Berhasil! Token tersimpan di storage/app/private/{$this->tokenFile_prod}. Sekarang coba akses /xero/contacts",
             // ];
             return "Koneksi Berhasil! Token tersimpan di storage/app/private/{$this->tokenFile_prod}. Sekarang coba akses /xero/contacts";
         }
@@ -116,7 +118,7 @@ class XeroContactController extends Controller
             return null;
         }
 
-        $tokens = json_decode(Storage::get($this->tokenFile_prod), true);
+        $tokens = json_decode(Storage::get($this->Token), true);
         if (empty($tokens))
             return null;
 
