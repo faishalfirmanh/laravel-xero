@@ -688,7 +688,7 @@
         // Tampilan Loading
         let originalHtml = btn.html();
         btn.html('<i class="fas fa-spinner fa-spin"></i>').prop('disabled', true);
-
+        console.log("payload ",payload)
         // AJAX CALL KE CONTROLLER SAVE
         $.ajax({
             url: "{{ route('invoice.item.save') }}", // Panggil Route Laravel

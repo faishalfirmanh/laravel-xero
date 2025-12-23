@@ -71,6 +71,7 @@ class InvoicesDuplicateController extends Controller
                 Log::info("=== SELESAI SUCCESS ===");
 
             } catch (\Exception $e) {
+                Log::info("InvoicesDuplicateController ,updateInvoiceSelected() line 74");
                 Log::error("ERROR pada Invoice " . $value['no_invoice'] . ": " . $e->getMessage());
                 $errors[] = ['no_invoice' => $value['no_invoice'], 'message' => $e->getMessage()];
             }
@@ -194,13 +195,14 @@ class InvoicesDuplicateController extends Controller
                             "LineItems" => [[
                                 "Description" => "Overpayment / Kelebihan bayar",
                                 "UnitAmount" => $bayarKeOverpayment,
-                                "AccountCode" => "800", // Ganti kode akun ini jika perlu (misal akun suspens/liability)
+                                //"AccountCode" => "800", // Ganti kode akun ini jika perlu (misal akun suspens/liability)
                                 // Atau hapus baris "AccountCode" agar Xero menggunakan default Accounts Receivable
                             ]]
                         ]]
                     ]);
 
                 if ($resOver->failed()) {
+                    Log::info("error InvoiceDuplicateController line 204");
                     Log::error("Gagal Overpayment: " . $resOver->body());
                     // Opsional: throw exception atau biarkan lanjut
                 } else {

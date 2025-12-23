@@ -96,7 +96,7 @@ class InvoiceItem2Controller extends Controller
             // Susun Tracking
             $tracking = [];
             if ($request->filled('agent_id')) {
-                $tracking[] = ['Name' => 'Agent', 'Option' => '', 'TrackingOptionID' => $request->agent_id];
+                $tracking[] = ['Name' => 'Agen', 'Option' => '', 'TrackingOptionID' => $request->agent_id];
             }
             if ($request->filled('divisi_id')) {
                 $tracking[] = ['Name' => 'Divisi', 'Option' => '', 'TrackingOptionID' => $request->divisi_id];
@@ -114,6 +114,7 @@ class InvoiceItem2Controller extends Controller
                 'Tracking'      => $tracking
             ];
 
+            //dd($tracking);
             if ($request->filled('line_item_id')) {
                 $newLineItem['LineItemID'] = $request->line_item_id;
             }

@@ -49,6 +49,36 @@ function getDataEdit(id) {
     });
 }
 
+function loadDataItem(idPaket){
+    if (idPaket) currentIdPaket = idPaket;
+    console.log("idpake",idPaket)
+    $('#listInvoiceLoader').removeClass('d-none');
+    $('#invoiceTable').addClass('d-none');
+    $('#invoiceTableBody').empty();
+
+    $.ajax({
+        url: `${URL_INVOICE}${currentIdPaket}`,
+        type: 'GET',
+        dataType: 'json',
+        success: function (response) {
+            console.log("invoice ",response)
+            var notifContainer = $('#notif_save_checbox');
+            notifContainer.empty();
+            $('#listInvoiceLoader').addClass('d-none');
+            $('#invoiceTable').removeClass('d-none');
+            loadViewNoPaging(response)
+        },
+        error: function (xhr, status, error) {
+            $('#listInvoiceLoader').addClass('d-none');
+            $('#invoiceTable').removeClass('d-none');
+            console.error("Error fetching invoice:", xhr);
+            console.log("error",status)
+            console.log("errorssss",error)
+            $('#invoiceTableBody').html('<tr><td colspan="10" class="text-center text-danger">Gagal mengambil data.</td></tr>');
+        }
+    });
+}
+
 
 function formatDateIndo(dateString) {
     if (!dateString) return '-';
@@ -208,6 +238,7 @@ $(document).ready(function () {
                             <td>${description}</td>
                             <td>
                                 <button type="button" onclick="getDataEdit('${contact.ItemID}')" class="btn btn-primary btn-sm">Edit</button>
+                                <button type="button" onclick="loadDataItem('${contact.ItemID}')" class="btn btn-success btn-sm">Load Invoice</button>
                             </td>
                         </tr>
                     `;

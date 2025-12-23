@@ -5,6 +5,7 @@ use App\ConfigRefreshXero;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Models\PaymentParams;
+use Illuminate\Support\Facades\Log;
 class InvoicesController extends Controller
 {
 
@@ -406,7 +407,114 @@ class InvoicesController extends Controller
         }
     }
 
+
     public function getInvoiceByIdPaket($itemCode = 0)
+    {
+        set_time_limit(0); // Biarkan berjalan lama jika data banyak
+
+        try {
+            $tokenData = $this->getValidToken();
+            if (!$tokenData) {
+                Log::error('Xero API Error Page token gagal api list invoices');
+                return response()->json(['message' => 'Token kosong/invalid. Silakan akses /xero/connect dulu.'], 401);
+            }
+
+            $tenantId = env('XERO_TENANT_ID');
+            $list_invoice = [];
+            $page = 1;
+            $hasMoreData = true;
+
+            // Loop untuk mengambil data per halaman (100 data per request)
+            // Ini jauh lebih cepat daripada mengambil detail satu per satu
+            do {
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $tokenData['access_token'],
+                    'Xero-Tenant-Id' => $tenantId,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ])->get('https://api.xero.com/api.xro/2.0/Invoices', [
+                    'page' => $page, // Parameter paging Xero
+                    //'where' => 'Status!="DELETED" AND Status!="VOIDED"' // Filter opsional biar lebih ringan
+                ]);
+
+                // Cek Error Request
+                if ($response->failed()) {
+                    Log::error('Xero API Error Page ' . $page . ':', [
+                        'url' => 'GET /Invoices',
+                        'status' => $response->status(),
+                        'response' => $response->json()
+                    ]);
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Gagal ambil data invoices pada halaman ' . $page,
+                        'xero_status_code' => $response->status(),
+                        'xero_error_detail' => $response->json()
+                    ], $response->status());
+                }
+
+                $invoices = $response->json()['Invoices'];
+
+                // Jika halaman ini kosong, berarti data sudah habis
+                if (empty($invoices)) {
+                    $hasMoreData = false;
+                    break;
+                }
+
+                // Loop data dari halaman ini (Data Memory Lokal, bukan API Call)
+                foreach ($invoices as $invoice) {
+                    // Pastikan LineItems ada
+                    if (!isset($invoice['LineItems']) || empty($invoice['LineItems'])) {
+                        continue;
+                    }
+
+                    foreach ($invoice['LineItems'] as $item) {
+                        // Filter berdasarkan ItemCode
+                        if (isset($item['ItemCode']) && $item['ItemCode'] == $itemCode) {
+
+                            // Struktur data SAMA PERSIS dengan kode lama Anda
+                            $list_invoice[] = [
+                                'parent_invoice_id' => $invoice['InvoiceID'],
+                                'nama_jamaah' => $invoice['Contact']['Name'] ?? '-',
+                                'no_invoice' => $invoice['InvoiceNumber'],
+                                'line_item_id' => $item['LineItemID'],
+                                'detail_amount_tiap_item' => $item['LineAmount'],
+                                'qty_tiap_item' => $item['Quantity'],
+                                'tanggal' => $invoice['DateString'] ?? '',
+                                'tanggal_due_date' => $invoice['DueDateString'] ?? null,
+                                // Handle jika Item object tidak terload sempurna (safety check)
+                                'paket_name' => $item['Item']['Name'] ?? $item['Description'] ?? '-',
+                                'amount_paid' => $invoice['AmountPaid'],
+                                'total' => $invoice['Total'],
+                                'status' => $invoice['Status'],
+                                'payment' => $invoice['Payments'] ?? []
+                            ];
+                        }
+                    }
+                }
+
+                // Jika jumlah data kurang dari 100, berarti ini halaman terakhir
+                if (count($invoices) < 100) {
+                    $hasMoreData = false;
+                } else {
+                    $page++; // Lanjut ke halaman berikutnya
+                    sleep(1); // Jeda 1 detik agar aman dari Rate Limit Xero (60req/menit)
+                }
+
+            } while ($hasMoreData);
+
+            // Return Response (Logic sama seperti sebelumnya)
+            if (count($list_invoice) > 0) {
+                return response()->json($list_invoice, 200);
+            } else {
+                return response()->json(['message' => 'Data tidak ditemukan atau Xero API Error'], 404);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Proxy Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function getInvoiceByIdPaketOld($itemCode = 0)
     {
         //  dd($itemCode);
         set_time_limit(0);
@@ -425,6 +533,22 @@ class InvoicesController extends Controller
                 'Accept' => 'application/json',
             ])->get('https://api.xero.com/api.xro/2.0/Invoices');
 
+            if ($response->failed()) {
+                $errorDetail = $response->json();
+                $statusCode = $response->status();
+                Log::error('Xero API Error get list invoices :', [
+                    'url' => 'GET /api/getInvoiceByIdPaket/'.$itemCode,
+                    'status' => $statusCode,
+                    'response' => $errorDetail
+                ]);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Gagal ambil data items',
+                    'xero_status_code' => $statusCode,
+                    'xero_error_detail' => $errorDetail
+                ], $statusCode);
+            }
+
             //dd($response['Invoices']);
             $items_inv = 0;
             $list_invoice = [];
@@ -438,8 +562,23 @@ class InvoicesController extends Controller
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ])->get("https://api.xero.com/api.xro/2.0/Invoices/$cleanId");
-                //
-                // dd($value);
+
+                 if ($resp2->failed()) {
+                    $errorDetail_2 = $resp2->json();
+                    $statusCode_2 = $resp2->status();
+                    Log::error('Xero API Error get details:', [
+                        'url' => 'GET /Items : https://api.xero.com/api.xro/2.0/Invoices/'.$cleanId,
+                        'status' => $statusCode_2,
+                        'response' => $errorDetail_2
+                    ]);
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Gagal ambil detail invoices',
+                        'xero_status_code' => $statusCode_2,
+                        'xero_error_detail' => $errorDetail_2
+                    ], $statusCode_2);
+                }
+
                 foreach ($resp2['Invoices'] as $key2 => $value2) {//items
 
                     foreach ($value2['LineItems'] as $key3 => $value3) {//list
