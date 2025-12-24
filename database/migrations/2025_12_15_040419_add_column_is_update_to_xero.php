@@ -14,10 +14,10 @@ return new class extends Migration
 
        // \DB::connection('mysql_2')->statement("UPDATE data_jamaah SET estimasi_berangkat = NULL WHERE CAST(estimasi_berangkat AS CHAR) = '0000-00-00'");
 
-       Schema::connection("mysql_2")->table('data_jamaah', function (Blueprint $table) {
-            $table->boolean('is_updated_to_xero')
-                  ->default(false);
-        });
+    //    Schema::connection("mysql_2")->table('data_jamaah', function (Blueprint $table) {
+    //         $table->boolean('is_updated_to_xero')
+    //               ->default(false);
+    //     });
     }
 
     /**
@@ -25,10 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('data_jamaah', function (Blueprint $table) {
-          Schema::connection("mysql_2")->table('data_jamaah', function (Blueprint $table) {
-            $table->dropColumn('is_updated_to_xero');
-        });
-        });
+        // Schema::table('data_jamaah', function (Blueprint $table) {
+        //   Schema::connection("mysql_2")->table('data_jamaah', function (Blueprint $table) {
+        //     $table->dropColumn('is_updated_to_xero');
+        // });
+        // });
     }
 };
